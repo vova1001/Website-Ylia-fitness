@@ -24,7 +24,7 @@ services:
 
   backend:
     build: 
-      context: ./Website-Ylia-fitness-main
+      context: ./Website-Ylia-fitness-backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -41,7 +41,7 @@ services:
 
   frontend:
     build:
-      context: ./Website-Ylia-fitness-front
+      context: ./Website-Ylia-fitness-frontend
       dockerfile: Dockerfile
     ports:
       - "3000:3000"  # меняем с 80 на 3000
