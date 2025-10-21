@@ -24,7 +24,7 @@ services:
 
   backend:
     build: 
-      context: ./Website-Ylia-fitness-backend
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
@@ -41,10 +41,10 @@ services:
 
   frontend:
     build:
-      context: ./Website-Ylia-fitness-frontend
+      context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"  # меняем с 80 на 3000
+      - "3000:80"
     depends_on:
       - backend
     restart: unless-stopped
