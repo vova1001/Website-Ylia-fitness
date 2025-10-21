@@ -13,8 +13,12 @@ import (
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
-func GetJson(ctx *gin.Context) {
-	ctx.JSON(200, "Hello, server is runnig!!!")
+func GetHethJSON(ctx *gin.Context) {
+	ctx.JSON(200, "Server is running!")
+}
+
+func GetAuthJson(ctx *gin.Context) {
+	ctx.JSON(200, "Authorization successful")
 }
 
 func PostNewUserJson(ctx *gin.Context) {
@@ -100,12 +104,12 @@ func FogotPassJSON(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-	err = h.FogotPass(email)
+	token, err := h.FogotPass(email)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
-	ctx.JSON(200, "the link was sent successfully")
+	ctx.JSON(200, token)
 }
 
 func ResetPasswordJSON(ctx *gin.Context) {

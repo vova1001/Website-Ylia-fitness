@@ -94,15 +94,15 @@ func AuthUser(User m.User) (m.Token, error) {
 
 }
 
-func FogotPass(email m.FogotPass) error {
+func FogotPass(email m.FogotPass) (string, error) {
 	var exist bool
 	var tokenNP m.TokenNewPass
 	err := d.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email.Email).Scan(&exist)
 	if err != nil {
-		return fmt.Errorf("error checking existing user: %w", err)
+		return "", fmt.Errorf("error checking existing user: %w", err)
 	}
 	if !exist {
-		return fmt.Errorf("there is no user with this email, please register")
+		return "", fmt.Errorf("there is no user with this email, please register")
 	}
 	createTable := `
 	CREATE TABLE IF NOT EXISTS password_resets(
@@ -115,11 +115,11 @@ func FogotPass(email m.FogotPass) error {
 	`
 	_, err = d.DB.Exec(createTable)
 	if err != nil {
-		return fmt.Errorf("table password_resets not created: %w", err)
+		return "", fmt.Errorf("table password_resets not created: %w", err)
 	}
 	token, err := o.GeneratorToken(32)
 	if err != nil {
-		return err
+		return "", err
 	}
 	log.Printf("DEBUG reset token for %s = %s\n", email.Email, token)
 	_, _ = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email)
@@ -129,16 +129,16 @@ func FogotPass(email m.FogotPass) error {
 	tokenNP.Used = false
 	_, err = d.DB.Exec("INSERT INTO password_resets(email, token_hash, time_life) VALUES($1,$2,$3)", email.Email, tokenNP.HashToken, tokenNP.TimeLife)
 	if err != nil {
-		return fmt.Errorf("error adding token info: %w", err)
+		return "", fmt.Errorf("error adding token info: %w", err)
 	}
 
 	resetLink := fmt.Sprintf("https://yourfrontend.com/reset-password?token=%s", token)
 
 	err = o.SendResetEmail(email.Email, resetLink)
 	if err != nil {
-		return fmt.Errorf("error sending email: %w", err)
+		return "", fmt.Errorf("error sending email: %w", err)
 	}
-	return nil
+	return token, nil
 }
 
 func ResetPassword(NewPass m.NewPass) error {

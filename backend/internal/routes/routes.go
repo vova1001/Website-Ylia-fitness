@@ -9,11 +9,12 @@ func RegisterRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 	auth.Use(h.JWT_Middleware())
 	{
-		auth.GET("/hi", h.GetJson)
+		auth.GET("/hi", h.GetAuthJson)
 	}
 	r.POST("/registerUser", h.PostNewUserJson)
 	r.POST("/authUser", h.PostAuthJson)
 	r.POST("/fogotPassword", h.FogotPassJSON)
 	r.POST("/resetPassword", h.ResetPasswordJSON)
+	r.GET("/", h.GetHethJSON)
 
 }
