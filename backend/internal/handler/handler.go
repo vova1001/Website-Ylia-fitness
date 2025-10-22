@@ -164,3 +164,17 @@ func ResetPassword(NewPass m.NewPass) error {
 	}
 	return nil
 }
+
+func PurchesRequest(PR m.PurchaseRequest, UserID int, Email string) error {
+	var Purchase m.Purchase
+	Purchase.UserID = UserID
+	Purchase.ProductID = PR.IdProduct
+	Purchase.Email = Email
+	Purchase.CreateadAt = time.Now()
+	Purchase.PaymentID = ""
+	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", PR.IdProduct).Scan(&Purchase.ProductName, &Purchase.ProductPrice)
+	if err != nil {
+		return fmt.Errorf("err scan from product")
+	}
+	return nil
+}

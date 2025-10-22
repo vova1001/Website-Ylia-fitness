@@ -25,14 +25,13 @@ func DB_Conect() {
 	var err error
 	DB, err = sql.Open("postgres", dsn)
 	if err != nil {
-		log.Fatal("Ошибка подключения к БД:", err)
+		log.Fatal("Error conect from DB", err)
 	}
 
-	if err = DB.Ping(); err != nil {
-		log.Fatal("Не удалось подключиться к БД:", err)
-	}
+	fmt.Println("DB connected")
 
-	fmt.Println("✅ Подключение к БД успешно!")
+	createTableProduct()
+	createTablePurchaseRequest()
 }
 
 func getEnv(key, defaultValue string) string {
@@ -40,4 +39,41 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+func createTableProduct() {
+	createTable := `
+	CREATE TABLE IF NOT EXISTS products (
+		id SERIAL PRIMARY KEY,
+		name TEXT NOT NULL,
+		price DECIMAL(10,2) NOT NULL,
+		currency TEXT DEFAULT 'RUB'
+	);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table product")
+	}
+	fmt.Println("Table products created successefully")
+}
+
+func createTablePurchaseRequest() {
+	createTable := `
+	CREATE TABLE IF NOT EXISTS purchase_request(
+		id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        email TEXT NOT NULL,
+        product_id INTEGER NOT NULL,
+        product_name TEXT NOT NULL,
+        product_price DECIMAL(10,2) NOT NULL,
+        payment_id TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		status TEXT
+	);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table purchase_request")
+	}
+	fmt.Println("Table purchase_request created successefully")
 }

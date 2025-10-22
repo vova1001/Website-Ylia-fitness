@@ -27,9 +27,26 @@ type NewPass struct {
 	Token   string `json:"token"`
 }
 
+type PurchaseRequest struct {
+	IdProduct int    `json:"id_product"`
+	UserToken string `json:"user_token"`
+}
+
 type TokenNewPass struct {
 	EmailToToken string
 	HashToken    string
 	TimeLife     time.Time
 	Used         bool
+}
+
+type Purchase struct {
+	UserID       int
+	Email        string
+	ProductID    int
+	ProductName  string
+	ProductPrice float64
+	Currency     string
+	CreateadAt   time.Time
+	Status       string
+	PaymentID    string
 }
