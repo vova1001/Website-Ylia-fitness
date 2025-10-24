@@ -110,9 +110,11 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 		Capture:     true,
 		Description: description,
 		Confirmation: struct {
-			Type string `json:"type"`
+			Type      string `json:"type"`
+			ReturnURL string `json:"return_url"`
 		}{
-			Type: "redirect",
+			Type:      "redirect",
+			ReturnURL: "https://yoursite.com/payment/status",
 		},
 	}
 

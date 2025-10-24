@@ -121,3 +121,26 @@ func ResetPasswordJSON(ctx *gin.Context) {
 	}
 	ctx.JSON(200, "new password has been successfully set")
 }
+
+func PurchaseJSON(ctx *gin.Context) {
+	var PerchaseRequest m.PurchaseRequest
+	err := ctx.ShouldBindJSON(PerchaseRequest)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": "err json"})
+		return
+	}
+
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+	}
+
+	Email, exists := ctx.Get("userEmail")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "Email not found"})
+	}
+
+	UserIDint := UserID.(int)
+	EmailStr := Email.(string)
+	err = h.PurchesRequest(PerchaseRequest, UserIDint, EmailStr)
+}
