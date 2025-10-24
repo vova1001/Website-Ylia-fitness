@@ -176,5 +176,9 @@ func PurchesRequest(PR m.PurchaseRequest, UserID int, Email string) error {
 	if err != nil {
 		return fmt.Errorf("err scan from product")
 	}
+	yk := o.NewYookassaClient(
+		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+		o.GetEnv("YOOKASSA_API_KEY", ""),
+	)
 	return nil
 }

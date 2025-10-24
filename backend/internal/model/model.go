@@ -1,6 +1,9 @@
 package model
 
-import "time"
+import (
+	"net/http"
+	"time"
+)
 
 type Task struct {
 	Id   int    `json:"id,omitempty"`
@@ -45,8 +48,34 @@ type Purchase struct {
 	ProductID    int
 	ProductName  string
 	ProductPrice float64
-	Currency     string
 	CreateadAt   time.Time
-	Status       string
 	PaymentID    string
+}
+
+type YookassaClient struct {
+	ShopID  string
+	BaseURL string
+	ApiKey  string
+	Client  *http.Client
+}
+
+type YookassaPaymentRequest struct {
+	Amount struct {
+		Value    string `json:"value"`
+		Currency string `json:"currency"`
+	} `json:"amount"`
+	Capture      bool   `json:"capture"`
+	Description  string `json:"description"`
+	Confirmation struct {
+		Type      string `json:"type"`
+		ReturnURL string `json:"return_url"`
+	} `json:"confirmation"`
+}
+
+type YookassaPaymentResponse struct {
+	ID           string `json:"id"`
+	Status       string `json:"status"`
+	Confirmation struct {
+		ConfirmationURL string `json:"confirmation_url"`
+	} `json:"confirmation"`
 }

@@ -4,20 +4,21 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
+
+	o "github.com/vova1001/Website-Ylia-fitness/internal/otherFunc"
 )
 
 var DB *sql.DB
 
 func DB_Conect() {
-	dbHost := getEnv("DB_HOST", "postgres")
-	dbPort := getEnv("DB_PORT", "5432")
-	dbUser := getEnv("DB_USER", "myuser")
-	dbPassword := getEnv("DB_PASSWORD", "mypassword")
-	dbName := getEnv("DB_NAME", "mydb")
-	dbSSLMode := getEnv("DB_SSLMODE", "disable")
+	dbHost := o.GetEnv("DB_HOST", "postgres")
+	dbPort := o.GetEnv("DB_PORT", "5432")
+	dbUser := o.GetEnv("DB_USER", "myuser")
+	dbPassword := o.GetEnv("DB_PASSWORD", "mypassword")
+	dbName := o.GetEnv("DB_NAME", "mydb")
+	dbSSLMode := o.GetEnv("DB_SSLMODE", "disable")
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
@@ -32,13 +33,6 @@ func DB_Conect() {
 
 	createTableProduct()
 	createTablePurchaseRequest()
-}
-
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 func createTableProduct() {
@@ -67,8 +61,7 @@ func createTablePurchaseRequest() {
         product_name TEXT NOT NULL,
         product_price DECIMAL(10,2) NOT NULL,
         payment_id TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		status TEXT
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err := DB.Exec(createTable)

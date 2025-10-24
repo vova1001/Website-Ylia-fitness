@@ -1,12 +1,20 @@
 package otherfunc
 
 import (
+	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/mail"
 	"net/smtp"
+	"os"
 	"strings"
+	"time"
+
+	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
 func EmailCheck(email string) bool {
@@ -70,4 +78,66 @@ func SendResetEmail(toEmail, resetLink string) error {
 		[]string{toEmail},
 		[]byte(msg),
 	)
+}
+
+func GetEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
+func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
+	return &m.YookassaClient{
+		ShopID:  shopID,
+		ApiKey:  apiKey,
+		BaseURL: "https://api.yookassa.ru/v3",
+		Client: &http.Client{
+			Timeout: 30 * time.Second,
+		},
+	}
+}
+
+func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m.YookassaPaymentResponse, error) {
+	req := &m.YookassaPaymentRequest{
+		Amount: struct {
+			Value    string `json:"value"`
+			Currency string `json:"currency"`
+		}{
+			Value:    fmt.Sprintf("%.2f", amount),
+			Currency: "RUB",
+		},
+		Capture:     true,
+		Description: description,
+		Confirmation: struct {
+			Type string `json:"type"`
+		}{
+			Type: "redirect",
+		},
+	}
+
+	return SendRequest(yc, req)
+}
+
+func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.YookassaPaymentResponse, error) {
+
+	auth := base64.StdEncoding.EncodeToString([]byte(yc.ShopID + ":" + yc.ApiKey))
+
+	jsonData, _ := json.Marshal(req)
+
+	httpReq, _ := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
+	httpReq.Header.Set("Authorization", "Basic "+auth)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Idempotence-Key", fmt.Sprintf("%d", time.Now().UnixNano()))
+
+	resp, err := yc.Client.Do(httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var paymentResp m.YookassaPaymentResponse
+	json.NewDecoder(resp.Body).Decode(&paymentResp)
+
+	return &paymentResp, nil
 }
