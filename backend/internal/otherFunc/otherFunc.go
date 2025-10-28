@@ -114,7 +114,7 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 			ReturnURL string `json:"return_url"`
 		}{
 			Type:      "redirect",
-			ReturnURL: "https://yoursite.com/payment/status",
+			ReturnURL: "https://website-ylia-fitness-frontend.onrender.com/",
 		},
 	}
 

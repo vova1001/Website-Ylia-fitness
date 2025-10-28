@@ -114,17 +114,22 @@ func FogotPassJSON(ctx *gin.Context) {
 
 func ResetPasswordJSON(ctx *gin.Context) {
 	var NewPass m.NewPass
-	ctx.ShouldBindJSON(&NewPass)
-	err := h.ResetPassword(NewPass)
+	err := ctx.ShouldBindJSON(&NewPass)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": "err json"})
+		return
+	}
+	err = h.ResetPassword(NewPass)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
 	}
 	ctx.JSON(200, "new password has been successfully set")
 }
 
 func PurchaseJSON(ctx *gin.Context) {
 	var PerchaseRequest m.PurchaseRequest
-	err := ctx.ShouldBindJSON(PerchaseRequest)
+	err := ctx.ShouldBindJSON(&PerchaseRequest)
 	if err != nil {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
@@ -133,14 +138,50 @@ func PurchaseJSON(ctx *gin.Context) {
 	UserID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
 	}
 
 	Email, exists := ctx.Get("userEmail")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "Email not found"})
+		return
 	}
 
 	UserIDint := UserID.(int)
 	EmailStr := Email.(string)
-	err = h.PurchesRequest(PerchaseRequest, UserIDint, EmailStr)
+	URL_payment, err := h.PurchesRequest(PerchaseRequest, UserIDint, EmailStr)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, URL_payment)
+}
+
+func WebhookJSON(ctx *gin.Context) {
+	var Webhook m.YookassaWebhook
+	err := ctx.ShouldBindJSON(&Webhook)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": "err json"})
+		return
+	}
+	err = h.WebhookY(Webhook)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+}
+
+func GetCourseJSON(ctx *gin.Context) {
+	userID, exists := ctx.Get("UserID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+	ResURL, err := h.GetCourse(UserIDint)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, ResURL)
 }

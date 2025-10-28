@@ -79,3 +79,12 @@ type YookassaPaymentResponse struct {
 		ConfirmationURL string `json:"confirmation_url"`
 	} `json:"confirmation"`
 }
+
+type YookassaWebhook struct {
+	Event  string `json:"event"`
+	Object struct {
+		ID     string `json:"id"`
+		Status string `json:"status"`
+		Paid   bool   `json:"paid"`
+	} `json:"object"`
+}

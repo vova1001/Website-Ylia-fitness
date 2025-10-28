@@ -126,7 +126,6 @@ func FogotPass(email m.FogotPass) (string, error) {
 	hash := sha256.Sum256([]byte(token))
 	tokenNP.HashToken = hex.EncodeToString(hash[:])
 	tokenNP.TimeLife = time.Now().Add(time.Minute * 15)
-	tokenNP.Used = false
 	_, err = d.DB.Exec("INSERT INTO password_resets(email, token_hash, time_life) VALUES($1,$2,$3)", email.Email, tokenNP.HashToken, tokenNP.TimeLife)
 	if err != nil {
 		return "", fmt.Errorf("error adding token info: %w", err)
@@ -202,4 +201,55 @@ func PurchesRequest(PR m.PurchaseRequest, UserID int, Email string) (string, err
 		return "", fmt.Errorf("err insert purchase_request: %v", err)
 	}
 	return resp.Confirmation.ConfirmationURL, nil
+}
+
+func WebhookY(Webook m.YookassaWebhook) error {
+	var PurchasePaid m.Purchase
+	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {
+		PurchasePaid.PaymentID = Webook.Object.ID
+	} else {
+		return fmt.Errorf("payment failed")
+	}
+	err := d.DB.QueryRow(`
+    SELECT user_id, email, product_id, product_name, product_price, payment_id, created_at 
+    FROM purchase_requests 
+    WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.ProductID, &PurchasePaid.ProductName, &PurchasePaid.ProductPrice, &PurchasePaid.PaymentID, &PurchasePaid.CreateadAt)
+	if err != nil {
+		return fmt.Errorf("err scan from purchase_requests")
+	}
+	_, err = d.DB.Exec(`
+    INSERT INTO successful_purchases 
+    (user_id, email, product_id, product_name, product_price, payment_id, purchased_at) 
+    VALUES ($1, $2, $3, $4, $5, $6, $7)`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.ProductID, PurchasePaid.ProductName, PurchasePaid.ProductPrice, PurchasePaid.PaymentID, time.Now())
+	if err != nil {
+		return fmt.Errorf("err insert successful_purchases: %v", err)
+	}
+	return nil
+}
+
+func GetCourse(userID int) ([]string, error) {
+	var CourseUrl []string
+	rows, err := d.DB.Query(`
+        SELECT p.url
+        FROM successful_purchases sp
+        JOIN products p ON sp.product_id = p.id
+        WHERE sp.user_id = $1`, userID)
+	if err != nil {
+		return nil, fmt.Errorf("err query rows: %v", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err != nil {
+			return nil, fmt.Errorf("err scan getcourse: %v", err)
+		}
+		CourseUrl = append(CourseUrl, url)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration err: %v", err)
+	}
+
+	return CourseUrl, nil
 }

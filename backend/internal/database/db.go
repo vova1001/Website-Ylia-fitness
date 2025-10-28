@@ -33,6 +33,7 @@ func DB_Conect() {
 
 	createTableProduct()
 	createTablePurchaseRequest()
+	createTableSuccessfulPurchases()
 }
 
 func createTableProduct() {
@@ -41,7 +42,8 @@ func createTableProduct() {
 		id SERIAL PRIMARY KEY,
 		name TEXT NOT NULL,
 		price DECIMAL(10,2) NOT NULL,
-		currency TEXT DEFAULT 'RUB'
+		currency TEXT DEFAULT 'RUB',
+		url TEXT NOT NULL
 	);
 	`
 	_, err := DB.Exec(createTable)
@@ -69,4 +71,24 @@ func createTablePurchaseRequest() {
 		log.Fatal("Error created table purchase_request")
 	}
 	fmt.Println("Table purchase_request created successefully")
+}
+
+func createTableSuccessfulPurchases() {
+	createTable := `
+		CREATE TABLE IF NOT EXISTS successful_purchases(
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			email TEXT NOT NULL,
+			product_id INTEGER NOT NULL,
+			product_name TEXT NOT NULL,
+			product_price DECIMAL(10,2) NOT NULL,
+			payment_id TEXT,
+			purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		);
+		`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table successful_purchases")
+	}
+	fmt.Println("Table successful_purchases created successefully")
 }
