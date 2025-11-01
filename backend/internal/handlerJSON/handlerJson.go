@@ -172,7 +172,7 @@ func WebhookJSON(ctx *gin.Context) {
 }
 
 func GetCourseJSON(ctx *gin.Context) {
-	userID, exists := ctx.Get("UserID")
+	userID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
 		return
