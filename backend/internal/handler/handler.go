@@ -59,6 +59,7 @@ func RegisterNewUser(NewUser m.User) error {
 func AuthUser(User m.User) (m.Token, error) {
 	var exist bool
 	var UserPass string
+	var UserID int
 	if !o.EmailCheck(User.Email) {
 		return m.Token{}, fmt.Errorf("invalid email: %s", User.Email)
 	}
@@ -69,7 +70,7 @@ func AuthUser(User m.User) (m.Token, error) {
 	if !exist {
 		return m.Token{}, fmt.Errorf("there is no user with this email, please register")
 	}
-	err = d.DB.QueryRow("SELECT password FROM users WHERE email =$1", User.Email).Scan(&UserPass)
+	err = d.DB.QueryRow("SELECT id, password FROM users WHERE email =$1", User.Email).Scan(&UserPass, &UserID)
 	if err != nil {
 		return m.Token{}, fmt.Errorf("error checking password user: %w", err)
 	}
@@ -79,7 +80,7 @@ func AuthUser(User m.User) (m.Token, error) {
 	}
 	sekretKey := os.Getenv("JWT_SECRET")
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"userID":   User.ID,
+		"userID":   UserID,
 		"email":    User.Email,
 		"timeLife": time.Now().Add(100 * time.Hour).Unix(),
 	})
