@@ -89,7 +89,14 @@ func JWT_Middleware() gin.HandlerFunc {
 			}
 		}
 
-		ctx.Set("userID", claims["userID"])
+		userIDFloat, ok := claims["userID"].(float64)
+		if !ok {
+			ctx.JSON(401, gin.H{"error": "invalid userID in token"})
+			ctx.Abort()
+			return
+		}
+
+		ctx.Set("userID", int(userIDFloat))
 		ctx.Set("userEmail", claims["email"])
 
 		ctx.Next()
