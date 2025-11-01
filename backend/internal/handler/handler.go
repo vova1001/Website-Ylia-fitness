@@ -70,7 +70,7 @@ func AuthUser(User m.User) (m.Token, error) {
 	if !exist {
 		return m.Token{}, fmt.Errorf("there is no user with this email, please register")
 	}
-	err = d.DB.QueryRow("SELECT id, password FROM users WHERE email =$1", User.Email).Scan(&UserPass, &UserID)
+	err = d.DB.QueryRow("SELECT id, password FROM users WHERE email =$1", User.Email).Scan(&UserID, &UserPass)
 	if err != nil {
 		return m.Token{}, fmt.Errorf("error checking password user: %w", err)
 	}
