@@ -12,27 +12,27 @@ type Task struct {
 }
 
 type User struct {
-	ID       int    `json:"id,omitempty"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	ID       int    `json:"id,omitempty" `
+	Email    string `json:"email" binding:"required"`
+	Password string `json:"password" binding:"required"`
 }
 
 type Token struct {
-	JWT_Token string `json:"jwt_token"`
+	JWT_Token string `json:"jwt_token" binding:"required"`
 }
 
 type FogotPass struct {
-	Email string `json:"email"`
+	Email string `json:"email" binding:"required"`
 }
 
 type NewPass struct {
-	NewPass string `json:"new_pass"`
-	Token   string `json:"token"`
+	NewPass string `json:"new_pass" binding:"required"`
+	Token   string `json:"token" binding:"required"`
 }
 
 type PurchaseRequest struct {
-	IdProduct int    `json:"id_product"`
-	UserToken string `json:"user_token"`
+	IdProduct int    `json:"id_product" binding:"required"`
+	UserToken string `json:"user_token" binding:"required"`
 }
 
 type TokenNewPass struct {
