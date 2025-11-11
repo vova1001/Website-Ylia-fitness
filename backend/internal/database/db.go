@@ -32,6 +32,7 @@ func DB_Conect() {
 	fmt.Println("DB connected")
 
 	createTableProduct()
+	createTableBasket()
 	createTablePurchaseRequest()
 	createTableSuccessfulPurchases()
 }
@@ -91,4 +92,22 @@ func createTableSuccessfulPurchases() {
 		log.Fatal("Error created table successful_purchases")
 	}
 	fmt.Println("Table successful_purchases created successefully")
+}
+
+func createTableBasket() {
+	createTable := `
+		CREATE TABLE IF NOT EXISTS basket(
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			email TEXT NOT NULL,
+			product_id INTEGER NOT NULL,
+			product_name TEXT NOT NULL,
+			product_price DECIMAL(10,2) NOT NULL,
+		);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table basket")
+	}
+	fmt.Println("Table basket created successefully")
 }

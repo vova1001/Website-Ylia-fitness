@@ -30,7 +30,7 @@ type NewPass struct {
 	Token   string `json:"token" binding:"required"`
 }
 
-type PurchaseRequest struct {
+type ProductAddBasket struct {
 	IdProduct int    `json:"id_product" binding:"required"`
 	UserToken string `json:"user_token" binding:"required"`
 }
@@ -50,6 +50,14 @@ type Purchase struct {
 	ProductPrice float64
 	CreateadAt   time.Time
 	PaymentID    string
+}
+
+type Basket struct {
+	UserID       int
+	Email        string
+	ProductID    int
+	ProductName  string
+	ProductPrice float64
 }
 
 type YookassaClient struct {

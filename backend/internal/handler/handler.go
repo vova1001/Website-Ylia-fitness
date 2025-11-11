@@ -165,44 +165,70 @@ func ResetPassword(NewPass m.NewPass) error {
 	return nil
 }
 
-func PurchesRequest(PR m.PurchaseRequest, UserID int, Email string) (string, error) {
-	var Purchase m.Purchase
-	Purchase.UserID = UserID
-	Purchase.ProductID = PR.IdProduct
-	Purchase.Email = Email
-	Purchase.CreateadAt = time.Now()
-	Purchase.PaymentID = ""
-	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", PR.IdProduct).Scan(&Purchase.ProductName, &Purchase.ProductPrice)
+func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
+	var Basket m.Basket
+	Basket.UserID = UserID
+	Basket.ProductID = ProductID
+	Basket.Email = Email
+	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", Basket.ProductID).Scan(&Basket.ProductName, &Basket.ProductPrice)
 	if err != nil {
 		return "", fmt.Errorf("err scan from product")
 	}
-	yc := o.NewYookassaClient(
-		o.GetEnv("YOOKASSA_SHOP_ID", ""),
-		o.GetEnv("YOOKASSA_API_KEY", ""),
-	)
-	resp, err := o.CreatePayment(yc, Purchase.ProductPrice, "Оплата "+Purchase.ProductName)
-	if err != nil {
-		return "", fmt.Errorf("err create payment %v", err)
-	}
-	Purchase.PaymentID = resp.ID
 
 	_, err = d.DB.Exec(`
-		INSERT INTO purchase_requests 
-		(user_id, email, product_id, product_name, product_price, payment_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		Purchase.UserID,
-		Purchase.Email,
-		Purchase.ProductID,
-		Purchase.ProductName,
-		Purchase.ProductPrice,
-		Purchase.PaymentID,
-		Purchase.CreateadAt,
+		INSERT INTO basket 
+		(user_id, email, product_id, product_name, product_price)
+		VALUES ($1, $2, $3, $4, $5)`,
+		Basket.UserID,
+		Basket.Email,
+		Basket.ProductID,
+		Basket.ProductName,
+		Basket.ProductPrice,
 	)
 	if err != nil {
-		return "", fmt.Errorf("err insert purchase_request: %v", err)
+		return "", fmt.Errorf("err insert basket: %v", err)
 	}
-	return resp.Confirmation.ConfirmationURL, nil
+	return "Successfully", nil
 }
+
+// func PurchesRequest(UserId int) (string, error) {
+// 	var Purchase m.Purchase
+// 	Purchase.UserID = UserID
+// 	Purchase.ProductID = PR.IdProduct
+// 	Purchase.Email = Email
+// 	Purchase.CreateadAt = time.Now()
+// 	Purchase.PaymentID = ""
+// 	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", PR.IdProduct).Scan(&Purchase.ProductName, &Purchase.ProductPrice)
+// 	if err != nil {
+// 		return "", fmt.Errorf("err scan from product")
+// 	}
+// 	yc := o.NewYookassaClient(
+// 		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+// 		o.GetEnv("YOOKASSA_API_KEY", ""),
+// 	)
+// 	resp, err := o.CreatePayment(yc, Purchase.ProductPrice, "Оплата "+Purchase.ProductName)
+// 	if err != nil {
+// 		return "", fmt.Errorf("err create payment %v", err)
+// 	}
+// 	Purchase.PaymentID = resp.ID
+
+// 	_, err = d.DB.Exec(`
+// 		INSERT INTO purchase_requests
+// 		(user_id, email, product_id, product_name, product_price, payment_id, created_at)
+// 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+// 		Purchase.UserID,
+// 		Purchase.Email,
+// 		Purchase.ProductID,
+// 		Purchase.ProductName,
+// 		Purchase.ProductPrice,
+// 		Purchase.PaymentID,
+// 		Purchase.CreateadAt,
+// 	)
+// 	if err != nil {
+// 		return "", fmt.Errorf("err insert purchase_request: %v", err)
+// 	}
+// 	return resp.Confirmation.ConfirmationURL, nil
+// }
 
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.Purchase
