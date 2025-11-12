@@ -33,6 +33,7 @@ func DB_Conect() {
 
 	createTableProduct()
 	createTableBasket()
+	createTablePurchaseItems()
 	createTablePurchaseRequest()
 	createTableSuccessfulPurchases()
 }
@@ -49,7 +50,7 @@ func createTableProduct() {
 	`
 	_, err := DB.Exec(createTable)
 	if err != nil {
-		log.Fatal("Error created table product")
+		log.Fatal("Error created table product", err)
 	}
 	fmt.Println("Table products created successefully")
 }
@@ -60,18 +61,33 @@ func createTablePurchaseRequest() {
 		id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         email TEXT NOT NULL,
-        product_id INTEGER NOT NULL,
-        product_name TEXT NOT NULL,
-        product_price DECIMAL(10,2) NOT NULL,
+		total_amount DECIMAL(10,2) NOT NULL,
         payment_id TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 	`
 	_, err := DB.Exec(createTable)
 	if err != nil {
-		log.Fatal("Error created table purchase_request")
+		log.Fatal("Error created table purchase_request", err)
 	}
 	fmt.Println("Table purchase_request created successefully")
+}
+
+func createTablePurchaseItems() {
+	createTable := `
+		CREATE TABLE IF NOT EXISTS purchase_items(
+			id SERIAL PRIMARY KEY,
+			purchase_request_id INTEGER NOT NULL REFERENCES purchase_request(id) ON DELETE CASCADE,
+			product_id INTEGER NOT NULL,
+			product_name TEXT NOT NULL,
+			product_price DECIMAL(10,2) NOT NULL
+		);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table purchase_items", err)
+	}
+	fmt.Println("Table purchase_items created successefully")
 }
 
 func createTableSuccessfulPurchases() {
@@ -89,7 +105,7 @@ func createTableSuccessfulPurchases() {
 		`
 	_, err := DB.Exec(createTable)
 	if err != nil {
-		log.Fatal("Error created table successful_purchases")
+		log.Fatal("Error created table successful_purchases", err)
 	}
 	fmt.Println("Table successful_purchases created successefully")
 }
@@ -102,12 +118,12 @@ func createTableBasket() {
 			email TEXT NOT NULL,
 			product_id INTEGER NOT NULL,
 			product_name TEXT NOT NULL,
-			product_price DECIMAL(10,2) NOT NULL,
+			product_price DECIMAL(10,2) NOT NULL
 		);
 	`
 	_, err := DB.Exec(createTable)
 	if err != nil {
-		log.Fatal("Error created table basket")
+		log.Fatal("Error created table basket", err)
 	}
 	fmt.Println("Table basket created successefully")
 }

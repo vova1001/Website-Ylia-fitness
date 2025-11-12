@@ -86,7 +86,7 @@ func AuthUser(User m.User) (m.Token, error) {
 	})
 	signedToken, err := token.SignedString([]byte(sekretKey))
 	if err != nil {
-		return m.Token{}, fmt.Errorf("error signed token")
+		return m.Token{}, fmt.Errorf("error signed token %w", err)
 	}
 	var SignedToken m.Token
 	SignedToken.JWT_Token = signedToken
@@ -147,7 +147,7 @@ func ResetPassword(NewPass m.NewPass) error {
 	tokenHash := hex.EncodeToString(hash[:])
 	err := d.DB.QueryRow("SELECT email, time_life, used FROM password_resets WHERE token_hash = $1", tokenHash).Scan(&tokenNP.EmailToToken, &tokenNP.TimeLife, &tokenNP.Used)
 	if err != nil {
-		return fmt.Errorf("err scan from pass_resets")
+		return fmt.Errorf("err scan from pass_resets %w", err)
 	}
 	if tokenNP.Used || (time.Now().After(tokenNP.TimeLife)) {
 		return fmt.Errorf("token invalid")
@@ -155,7 +155,7 @@ func ResetPassword(NewPass m.NewPass) error {
 	NewHashedPass, _ := bcrypt.GenerateFromPassword([]byte(tokenHash), bcrypt.DefaultCost)
 	_, err = d.DB.Exec("UPDATE users SET password=$1 WHERE email=$2", NewHashedPass, tokenNP.EmailToToken)
 	if err != nil {
-		return fmt.Errorf("err update new password")
+		return fmt.Errorf("err update new password %w", err)
 	}
 	tokenNP.Used = true
 	_, err = d.DB.Exec("UPDATE password_resets SET used=$1 WHERE token_hash=$2", tokenNP.Used, tokenNP.HashToken)
@@ -172,7 +172,7 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 	Basket.Email = Email
 	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", Basket.ProductID).Scan(&Basket.ProductName, &Basket.ProductPrice)
 	if err != nil {
-		return "", fmt.Errorf("err scan from product")
+		return "", fmt.Errorf("err scan from product %w", err)
 	}
 
 	_, err = d.DB.Exec(`
@@ -186,49 +186,79 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 		Basket.ProductPrice,
 	)
 	if err != nil {
-		return "", fmt.Errorf("err insert basket: %v", err)
+		return "", fmt.Errorf("err insert basket: %w", err)
 	}
 	return "Successfully", nil
 }
 
-// func PurchesRequest(UserId int) (string, error) {
-// 	var Purchase m.Purchase
-// 	Purchase.UserID = UserID
-// 	Purchase.ProductID = PR.IdProduct
-// 	Purchase.Email = Email
-// 	Purchase.CreateadAt = time.Now()
-// 	Purchase.PaymentID = ""
-// 	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", PR.IdProduct).Scan(&Purchase.ProductName, &Purchase.ProductPrice)
-// 	if err != nil {
-// 		return "", fmt.Errorf("err scan from product")
-// 	}
-// 	yc := o.NewYookassaClient(
-// 		o.GetEnv("YOOKASSA_SHOP_ID", ""),
-// 		o.GetEnv("YOOKASSA_API_KEY", ""),
-// 	)
-// 	resp, err := o.CreatePayment(yc, Purchase.ProductPrice, "Оплата "+Purchase.ProductName)
-// 	if err != nil {
-// 		return "", fmt.Errorf("err create payment %v", err)
-// 	}
-// 	Purchase.PaymentID = resp.ID
+func PurchesRequest(UserId int) (string, error) {
+	var PR m.PurchaseRequest
+	var items []m.PurchaseItem
+	rows, _ := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+	for rows.Next() {
+		var item m.PurchaseItem
+		//Пусть перезаписывает почту, я так вижу :)
+		err := rows.Scan(&PR.Email, &item.ProductID, &item.ProductName, &item.ProductPrice)
+		if err != nil {
+			return "", fmt.Errorf("err scan from basket %w", err)
+		}
+		PR.TotalAmount += item.ProductPrice
+		items = append(items, item)
+	}
+	PR.CreateadAt = time.Now()
+	PR.Items = items
+	PR.UserID = UserId
+	PR.PaymentID = ""
+	yc := o.NewYookassaClient(
+		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+		o.GetEnv("YOOKASSA_API_KEY", ""),
+	)
 
-// 	_, err = d.DB.Exec(`
-// 		INSERT INTO purchase_requests
-// 		(user_id, email, product_id, product_name, product_price, payment_id, created_at)
-// 		VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-// 		Purchase.UserID,
-// 		Purchase.Email,
-// 		Purchase.ProductID,
-// 		Purchase.ProductName,
-// 		Purchase.ProductPrice,
-// 		Purchase.PaymentID,
-// 		Purchase.CreateadAt,
-// 	)
-// 	if err != nil {
-// 		return "", fmt.Errorf("err insert purchase_request: %v", err)
-// 	}
-// 	return resp.Confirmation.ConfirmationURL, nil
-// }
+	var NamesItemsFromYK string
+	if len(items) > 1 {
+		NamesItemsFromYK = "Оплата товаров"
+	} else {
+		NamesItemsFromYK = "Оплата товара"
+	}
+	for _, item := range items {
+		NamesItemsFromYK += fmt.Sprintf(",%s", item.ProductName)
+	}
+
+	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK)
+	if err != nil {
+		return "", fmt.Errorf("err create payment %w", err)
+	}
+	PR.PaymentID = resp.ID
+
+	var PurchaseRequestsID int
+	err = d.DB.QueryRow(`
+		INSERT INTO purchase_requests
+		(user_id, email, total_amount, payment_id, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		RETURNING id`,
+		PR.UserID,
+		PR.Email,
+		PR.TotalAmount,
+		PR.PaymentID,
+		PR.CreateadAt,
+	).Scan(&PurchaseRequestsID)
+	if err != nil {
+		return "", fmt.Errorf("err returned id purchase_request: %w", err)
+	}
+
+	for _, item := range items {
+		_, err := d.DB.Exec(`
+			INSERT INTO purchase_items
+			(purchase_request_id, product_id, product_name, product_price)
+			VALUES ($1, $2, $3, $4)
+			`, PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice)
+		if err != nil {
+			return "", fmt.Errorf("err insert purchase_item: %w", err)
+		}
+	}
+
+	return resp.Confirmation.ConfirmationURL, nil
+}
 
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.Purchase
@@ -249,7 +279,7 @@ func WebhookY(Webook m.YookassaWebhook) error {
     (user_id, email, product_id, product_name, product_price, payment_id, purchased_at) 
     VALUES ($1, $2, $3, $4, $5, $6, $7)`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.ProductID, PurchasePaid.ProductName, PurchasePaid.ProductPrice, PurchasePaid.PaymentID, time.Now())
 	if err != nil {
-		return fmt.Errorf("err insert successful_purchases: %v", err)
+		return fmt.Errorf("err insert successful_purchases: %w", err)
 	}
 	return nil
 }
@@ -262,20 +292,20 @@ func GetCourse(userID int) ([]string, error) {
         JOIN products p ON sp.product_id = p.id
         WHERE sp.user_id = $1`, userID)
 	if err != nil {
-		return nil, fmt.Errorf("err query rows: %v", err)
+		return nil, fmt.Errorf("err query rows: %w", err)
 	}
 	defer rows.Close()
 
 	for rows.Next() {
 		var url string
 		if err := rows.Scan(&url); err != nil {
-			return nil, fmt.Errorf("err scan getcourse: %v", err)
+			return nil, fmt.Errorf("err scan getcourse: %w", err)
 		}
 		CourseUrl = append(CourseUrl, url)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration err: %v", err)
+		return nil, fmt.Errorf("rows iteration err: %w", err)
 	}
 
 	return CourseUrl, nil

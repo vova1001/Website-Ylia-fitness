@@ -42,14 +42,22 @@ type TokenNewPass struct {
 	Used         bool
 }
 
-type Purchase struct {
-	UserID       int
-	Email        string
-	ProductID    int
-	ProductName  string
-	ProductPrice float64
-	CreateadAt   time.Time
-	PaymentID    string
+type PurchaseRequest struct {
+	ID          int
+	UserID      int
+	Email       string
+	TotalAmount float64
+	CreateadAt  time.Time
+	PaymentID   string
+	Items       []PurchaseItem
+}
+
+type PurchaseItem struct {
+	ID                int
+	PurchaseRequestID int
+	ProductID         int
+	ProductName       string
+	ProductPrice      float64
 }
 
 type Basket struct {
