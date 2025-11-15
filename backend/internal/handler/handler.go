@@ -206,7 +206,6 @@ func PurchesRequest(UserId int) (string, error) {
 		items = append(items, item)
 	}
 	PR.CreateadAt = time.Now()
-	PR.Items = items
 	PR.UserID = UserId
 	PR.PaymentID = ""
 	yc := o.NewYookassaClient(
@@ -261,52 +260,78 @@ func PurchesRequest(UserId int) (string, error) {
 }
 
 func WebhookY(Webook m.YookassaWebhook) error {
-	var PurchasePaid m.Purchase
+	var PurchasePaid m.PurchasePaid
 	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {
 		PurchasePaid.PaymentID = Webook.Object.ID
 	} else {
 		return fmt.Errorf("payment failed")
 	}
+
 	err := d.DB.QueryRow(`
-    SELECT user_id, email, product_id, product_name, product_price, payment_id, created_at 
+    SELECT user_id, email, payment_id, id
     FROM purchase_requests 
-    WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.ProductID, &PurchasePaid.ProductName, &PurchasePaid.ProductPrice, &PurchasePaid.PaymentID, &PurchasePaid.CreateadAt)
+    WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
 	if err != nil {
 		return fmt.Errorf("err scan from purchase_requests")
 	}
-	_, err = d.DB.Exec(`
-    INSERT INTO successful_purchases 
-    (user_id, email, product_id, product_name, product_price, payment_id, purchased_at) 
-    VALUES ($1, $2, $3, $4, $5, $6, $7)`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.ProductID, PurchasePaid.ProductName, PurchasePaid.ProductPrice, PurchasePaid.PaymentID, time.Now())
-	if err != nil {
-		return fmt.Errorf("err insert successful_purchases: %w", err)
-	}
-	return nil
-}
+	PurchasePaid.SubStart = time.Now()
+	PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
 
-func GetCourse(userID int) ([]string, error) {
-	var CourseUrl []string
-	rows, err := d.DB.Query(`
-        SELECT p.url
-        FROM successful_purchases sp
-        JOIN products p ON sp.product_id = p.id
-        WHERE sp.user_id = $1`, userID)
-	if err != nil {
-		return nil, fmt.Errorf("err query rows: %w", err)
-	}
+	rows, _ := d.DB.Query(`
+		SELECT product_id, product_name, product_price 
+		FROM purchase_items
+		WHERE purchase_request_id=$1
+	`, PurchasePaid.ID)
+
 	defer rows.Close()
 
+	var PurchasePaidItems []m.PurchaseItem
 	for rows.Next() {
-		var url string
-		if err := rows.Scan(&url); err != nil {
-			return nil, fmt.Errorf("err scan getcourse: %w", err)
+		var PurchasePaidItem m.PurchaseItem
+		err := rows.Scan(&PurchasePaidItem.ProductID, &PurchasePaidItem.ProductName, &PurchasePaidItem.ProductPrice)
+		if err != nil {
+			return fmt.Errorf("Err scan PurchPaidItem:%w", err)
 		}
-		CourseUrl = append(CourseUrl, url)
+		PurchasePaidItems = append(PurchasePaidItems, PurchasePaidItem)
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration err: %w", err)
+	for _, ItemPaid := range PurchasePaidItems {
+		_, err := d.DB.Exec(`
+			INSERT INTO successful_purchases
+			(user_id, email, payment_id, sub_start, sub_end, product_name, product_price, product_id)
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+		`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.PaymentID, PurchasePaid.SubStart, PurchasePaid.SubEnd, ItemPaid.ProductName, ItemPaid.ProductPrice, ItemPaid.ProductID)
+		if err != nil {
+			return fmt.Errorf("err insert successful_purchases: %w", err)
+		}
 	}
+	return nil
 
-	return CourseUrl, nil
 }
+
+// func GetCourse(userID int) ([]string, error) {
+// 	var CourseUrl []string
+// 	rows, err := d.DB.Query(`
+//         SELECT p.url
+//         FROM successful_purchases sp
+//         JOIN products p ON sp.product_id = p.id
+//         WHERE sp.user_id = $1`, userID)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("err query rows: %w", err)
+// 	}
+// 	defer rows.Close()
+
+// 	for rows.Next() {
+// 		var url string
+// 		if err := rows.Scan(&url); err != nil {
+// 			return nil, fmt.Errorf("err scan getcourse: %w", err)
+// 		}
+// 		CourseUrl = append(CourseUrl, url)
+// 	}
+
+// 	if err := rows.Err(); err != nil {
+// 		return nil, fmt.Errorf("rows iteration err: %w", err)
+// 	}
+
+// 	return CourseUrl, nil
+// }

@@ -60,6 +60,15 @@ type PurchaseItem struct {
 	ProductPrice      float64
 }
 
+type PurchasePaid struct {
+	ID        int
+	UserID    int
+	Email     string
+	PaymentID string
+	SubStart  time.Time
+	SubEnd    time.Time
+}
+
 type Basket struct {
 	UserID       int
 	Email        string

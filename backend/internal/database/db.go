@@ -100,7 +100,8 @@ func createTableSuccessfulPurchases() {
 			product_name TEXT NOT NULL,
 			product_price DECIMAL(10,2) NOT NULL,
 			payment_id TEXT,
-			purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			sub_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			sub_end TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		);
 		`
 	_, err := DB.Exec(createTable)

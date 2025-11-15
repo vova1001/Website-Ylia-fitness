@@ -165,21 +165,21 @@ func AddBasketJSON(ctx *gin.Context) {
 
 }
 
-// func PurchaseJSON(ctx *gin.Context) {
-// 	UserID, exists := ctx.Get("userID")
-// 	if !exists {
-// 		ctx.JSON(401, gin.H{"err": "User not found"})
-// 		return
-// 	}
+func PurchaseJSON(ctx *gin.Context) {
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
 
-// 	UserIDint := UserID.(int)
-// 	URL_payment, err := h.PurchesRequest(UserIDint)
-// 	if err != nil {
-// 		ctx.JSON(500, gin.H{"err": err.Error()})
-// 		return
-// 	}
-// 	ctx.JSON(200, URL_payment)
-// }
+	UserIDint := UserID.(int)
+	URL_payment, err := h.PurchesRequest(UserIDint)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, URL_payment)
+}
 
 func WebhookJSON(ctx *gin.Context) {
 	var Webhook m.YookassaWebhook
@@ -195,17 +195,17 @@ func WebhookJSON(ctx *gin.Context) {
 	}
 }
 
-func GetCourseJSON(ctx *gin.Context) {
-	userID, exists := ctx.Get("userID")
-	if !exists {
-		ctx.JSON(401, gin.H{"err": "User not found"})
-		return
-	}
-	UserIDint := userID.(int)
-	ResURL, err := h.GetCourse(UserIDint)
-	if err != nil {
-		ctx.JSON(500, gin.H{"err": err.Error()})
-		return
-	}
-	ctx.JSON(200, ResURL)
-}
+// func GetCourseJSON(ctx *gin.Context) {
+// 	userID, exists := ctx.Get("userID")
+// 	if !exists {
+// 		ctx.JSON(401, gin.H{"err": "User not found"})
+// 		return
+// 	}
+// 	UserIDint := userID.(int)
+// 	ResURL, err := h.GetCourse(UserIDint)
+// 	if err != nil {
+// 		ctx.JSON(500, gin.H{"err": err.Error()})
+// 		return
+// 	}
+// 	ctx.JSON(200, ResURL)
+// }
