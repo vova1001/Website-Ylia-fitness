@@ -205,9 +205,25 @@ func GetBasketJSON(ctx *gin.Context) {
 	SliceBasket, err := h.GetBasket(UserIDint)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
 	}
 	ctx.JSON(200, SliceBasket)
 
+}
+
+func DeleteBasketJSON(ctx *gin.Context) {
+	var ProductID int
+	err := ctx.ShouldBindJSON(&ProductID)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": "err json"})
+		return
+	}
+	err = h.DeleteBasketItem(ProductID)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, "Item deleted from basket")
 }
 
 // func GetCourseJSON(ctx *gin.Context) {

@@ -330,6 +330,23 @@ func GetBasket(userID int) ([]m.Basket, error) {
 	return SliceBasket, nil
 }
 
+func DeleteBasketItem(ProductID int) error {
+	res, err := d.DB.Exec("DELETE FROM basket WHERE user_id=$1", ProductID)
+	if err != nil {
+		return fmt.Errorf("err delete from basket: %w", err)
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("err getting rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("no basket item found with user_id %d", ProductID)
+	}
+
+	return nil
+}
+
 // func GetCourse(userID int) ([]string, error) {
 // 	var CourseUrl []string
 // 	rows, err := d.DB.Query(`
