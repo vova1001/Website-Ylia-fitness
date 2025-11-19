@@ -195,6 +195,21 @@ func WebhookJSON(ctx *gin.Context) {
 	}
 }
 
+func GetBasketJSON(ctx *gin.Context) {
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := UserID.(int)
+	SliceBasket, err := h.GetBasket(UserIDint)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+	}
+	ctx.JSON(200, SliceBasket)
+
+}
+
 // func GetCourseJSON(ctx *gin.Context) {
 // 	userID, exists := ctx.Get("userID")
 // 	if !exists {

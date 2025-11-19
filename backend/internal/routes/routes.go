@@ -26,8 +26,8 @@ func RegisterRoutes(r *gin.Engine) {
 	{
 		auth.GET("/hi", h.GetAuthJson)
 		auth.POST("/purchase", h.PurchaseJSON)
-		auth.GET("/basket")
-		auth.POST("/basket/add")
+		auth.GET("/basket", h.GetBasketJSON)
+		auth.POST("/basket/add", h.AddBasketJSON)
 		auth.DELETE("/basekt/item")
 		// auth.GET("get-course",h.)
 	}
