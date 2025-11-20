@@ -76,6 +76,10 @@ type Basket struct {
 	ProductPrice float64
 }
 
+type DeleteBasketItem struct {
+	ID int `json:"delete_item_id"`
+}
+
 type YookassaClient struct {
 	ShopID  string
 	BaseURL string
