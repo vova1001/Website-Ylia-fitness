@@ -1,0 +1,23 @@
+{
+  "files": {
+    "main.css": "/static/css/main.56013e59.css",
+    "main.js": "/static/js/main.42887001.js",
+    "static/media/Frame.png": "/static/media/Frame.5e449bd763f567e7a8e3.png",
+    "static/media/Onest-Medium.woff2": "/static/media/Onest-Medium.fb5484a1fba9bc18b5d1.woff2",
+    "static/media/Onest-Regular.woff2": "/static/media/Onest-Regular.84b3d17ce6d31af2b4ad.woff2",
+    "static/media/Onest-SemiBold.woff2": "/static/media/Onest-SemiBold.a2240d0d6f9e0439dd41.woff2",
+    "static/media/Onest-Light.woff2": "/static/media/Onest-Light.2004178ec2a5303acfc1.woff2",
+    "static/media/Onest-ExtraLight.woff2": "/static/media/Onest-ExtraLight.aaaaf86f37f78fae8928.woff2",
+    "index.html": "/index.html",
+    "static/media/diet_left.svg": "/static/media/diet_left.a24e1e803d3ff0dc70ca.svg",
+    "static/media/left_btn.svg": "/static/media/left_btn.4d55babf2054f4322054.svg",
+    "static/media/diet_right.svg": "/static/media/diet_right.70992fce9f27816a426a.svg",
+    "static/media/right_btn.svg": "/static/media/right_btn.78b8669a31e43e4fffb2.svg",
+    "main.56013e59.css.map": "/static/css/main.56013e59.css.map",
+    "main.42887001.js.map": "/static/js/main.42887001.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.56013e59.css",
+    "static/js/main.42887001.js"
+  ]
+}
