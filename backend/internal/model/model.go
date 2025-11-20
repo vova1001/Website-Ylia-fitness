@@ -31,8 +31,7 @@ type NewPass struct {
 }
 
 type ProductAddBasket struct {
-	IdProduct int    `json:"id_product" binding:"required"`
-	UserToken string `json:"user_token" binding:"required"`
+	IdProduct int `json:"id_product" binding:"required"`
 }
 
 type TokenNewPass struct {
