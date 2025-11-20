@@ -1,3 +1,4 @@
+# Dockerfile
 FROM nginx:alpine
 
 # Копируем фронтенд из папки frontend/
