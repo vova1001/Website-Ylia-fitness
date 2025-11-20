@@ -42,8 +42,8 @@ func createTableProduct() {
 	createTable := `
 	CREATE TABLE IF NOT EXISTS products (
 		id SERIAL PRIMARY KEY,
-		name TEXT NOT NULL,
-		price DECIMAL(10,2) NOT NULL,
+		product_name TEXT NOT NULL,
+		product_price DECIMAL(10,2) NOT NULL,
 		currency TEXT DEFAULT 'RUB',
 		url TEXT NOT NULL
 	);
