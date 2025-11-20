@@ -141,19 +141,16 @@ func AddBasketJSON(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-
 	UserID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
 		return
 	}
-
 	Email, exists := ctx.Get("userEmail")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "Email not found"})
 		return
 	}
-
 	UserIDint := UserID.(int)
 	EmailStr := Email.(string)
 	IdProduct := Product.IdProduct
@@ -162,7 +159,6 @@ func AddBasketJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 	}
 	ctx.JSON(200, res)
-
 }
 
 func PurchaseJSON(ctx *gin.Context) {
