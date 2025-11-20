@@ -209,7 +209,7 @@ func GetBasketJSON(ctx *gin.Context) {
 
 func DeleteBasketJSON(ctx *gin.Context) {
 	var ProductID m.DeleteBasketItem
-	err := ctx.ShouldBindJSON(&ProductID.ID)
+	err := ctx.ShouldBindJSON(&ProductID)
 	if err != nil {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
