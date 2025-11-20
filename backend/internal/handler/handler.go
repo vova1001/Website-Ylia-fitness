@@ -330,8 +330,8 @@ func GetBasket(userID int) ([]m.Basket, error) {
 	return SliceBasket, nil
 }
 
-func DeleteBasketItem(ProductID int) error {
-	res, err := d.DB.Exec("DELETE FROM basket WHERE user_id=$1", ProductID)
+func DeleteBasketItem(ProductID, UserID int) error {
+	res, err := d.DB.Exec("DELETE FROM basket WHERE id=$1 AND user_id=$2", ProductID, UserID)
 	if err != nil {
 		return fmt.Errorf("err delete from basket: %w", err)
 	}
@@ -341,7 +341,7 @@ func DeleteBasketItem(ProductID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("no basket item found with user_id %d", ProductID)
+		return fmt.Errorf("no basket item found with product_id %d", ProductID)
 	}
 
 	return nil

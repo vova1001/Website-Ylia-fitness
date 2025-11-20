@@ -214,7 +214,13 @@ func DeleteBasketJSON(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-	err = h.DeleteBasketItem(ProductID.ID)
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := UserID.(int)
+	err = h.DeleteBasketItem(ProductID.ID, UserIDint)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
