@@ -170,7 +170,7 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 	Basket.UserID = UserID
 	Basket.ProductID = ProductID
 	Basket.Email = Email
-	err := d.DB.QueryRow("SELECT product_name, product_price, url FROM products WHERE id=$1", Basket.ProductID).Scan(&Basket.ProductName, &Basket.ProductPrice)
+	err := d.DB.QueryRow("SELECT product_name, product_price FROM products WHERE id=$1", Basket.ProductID).Scan(&Basket.ProductName, &Basket.ProductPrice)
 	if err != nil {
 		return "", fmt.Errorf("err scan from product %w", err)
 	}
