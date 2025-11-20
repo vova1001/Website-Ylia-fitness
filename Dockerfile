@@ -1,17 +1,12 @@
 # Dockerfile
-FROM golang:1.24-alpine
+FROM nginx:alpine
 
-WORKDIR /app
+# Копируем фронтенд из папки frontend/
+COPY ./frontend/ /usr/share/nginx/html/
 
-COPY go.mod go.sum ./
-RUN go mod download
+# Копируем nginx config из папки frontend/
+COPY ./frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
-COPY . .
+EXPOSE 80
 
-# Собираем из cmd директории
-RUN go build -o main ./cmd
-
-EXPOSE 8080
-
-CMD ["./main"]
-
+CMD ["nginx", "-g", "daemon off;"]
