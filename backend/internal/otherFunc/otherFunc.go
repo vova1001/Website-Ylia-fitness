@@ -32,10 +32,10 @@ func GeneratorToken(n int) (string, error) {
 }
 
 func SendResetEmail(toEmail, resetLink string) error {
-	from := os.Getenv("EMAIL_BOT")
-	pass := os.Getenv("EMAIL_BOT_PASS")
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
+	from := "yliafitness_helper@mail.ru"
+	pass := "aWfFfGRklLhggzbyfwfu"
+	smtpHost := "smtp.mail.ru"
+	smtpPort := "587"
 
 	switch {
 	case strings.HasSuffix(toEmail, "@mail.ru"):
