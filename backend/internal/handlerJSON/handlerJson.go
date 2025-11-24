@@ -42,10 +42,12 @@ func PostAuthJson(ctx *gin.Context) {
 	err := ctx.ShouldBindJSON(&User)
 	if err != nil {
 		ctx.JSON(400, gin.H{"err": "err json"})
+		return
 	}
 	token, err := h.AuthUser(User)
 	if err != nil {
 		ctx.JSON(401, gin.H{"err": err.Error()})
+		return
 	}
 	ctx.JSON(200, token)
 }
