@@ -35,7 +35,7 @@ func SendResetEmail(toEmail, resetLink string) error {
 	from := "yliafitness_helper@mail.ru"
 	pass := "Eud610DCBf9Ju0UTjWRy"
 	smtpHost := "smtp.mail.ru"
-	smtpPort := "587"
+	smtpPort := "465"
 
 	switch {
 	case strings.HasSuffix(toEmail, "@mail.ru"):
