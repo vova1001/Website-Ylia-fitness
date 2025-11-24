@@ -133,12 +133,12 @@ func FogotPass(email m.FogotPass) (string, error) {
 		return "", fmt.Errorf("error adding token info: %w", err)
 	}
 
-	// resetLink := fmt.Sprintf("https://yourfrontend.com/reset-password?token=%s", token)
+	resetLink := fmt.Sprintf("https://website-ylia-fitness-frontend.onrender.com/?token=%s", token)
 
-	// err = o.SendResetEmail(email.Email, resetLink)
-	// if err != nil {
-	// 	return "", fmt.Errorf("error sending email: %w", err)
-	// }
+	err = o.SendResetEmail(email.Email, resetLink)
+	if err != nil {
+		return "", fmt.Errorf("error sending email: %w", err)
+	}
 	return token, nil
 }
 
