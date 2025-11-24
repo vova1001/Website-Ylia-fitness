@@ -33,7 +33,7 @@ func GeneratorToken(n int) (string, error) {
 
 func SendResetEmail(toEmail, resetLink string) error {
 	from := "yliafitness_helper@mail.ru"
-	pass := "aWfFfGRklLhggzbyfwfu"
+	pass := "Eud610DCBf9Ju0UTjWRy"
 	smtpHost := "smtp.mail.ru"
 	smtpPort := "587"
 
