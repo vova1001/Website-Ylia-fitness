@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/mail"
 	"net/smtp"
@@ -35,7 +36,9 @@ func SendResetEmail(toEmail, resetLink string) error {
 	from := "yliafitness_helper@mail.ru"
 	pass := "Eud610DCBf9Ju0UTjWRy"
 	smtpHost := "smtp.mail.ru"
-	smtpPort := "465"
+	smtpPort := "587"
+
+	log.Println("[EMAIL] Step 1: starting function")
 
 	switch {
 	case strings.HasSuffix(toEmail, "@mail.ru"):
@@ -45,6 +48,8 @@ func SendResetEmail(toEmail, resetLink string) error {
 	case strings.HasSuffix(toEmail, "@rambler.ru"):
 		smtpHost = "smtp.rambler.ru"
 	}
+
+	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost)
 
 	htmlBody := fmt.Sprintf(`
     <html>
@@ -70,6 +75,8 @@ func SendResetEmail(toEmail, resetLink string) error {
 		"MIME-Version: 1.0\n" +
 		"Content-Type: text/html; charset=\"UTF-8\"\n\n" +
 		htmlBody
+
+	log.Println("[EMAIL] Step 3: calling SendMail...")
 
 	return smtp.SendMail(
 		smtpHost+":"+smtpPort,
