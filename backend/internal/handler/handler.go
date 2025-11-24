@@ -123,7 +123,8 @@ func FogotPass(email m.FogotPass) (string, error) {
 		return "", err
 	}
 	log.Printf("DEBUG reset token for %s = %s\n", email.Email, token)
-	_, _ = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email)
+	_, err = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email.Email)
+
 	hash := sha256.Sum256([]byte(token))
 	tokenNP.HashToken = hex.EncodeToString(hash[:])
 	tokenNP.TimeLife = time.Now().Add(time.Minute * 15)
@@ -132,12 +133,12 @@ func FogotPass(email m.FogotPass) (string, error) {
 		return "", fmt.Errorf("error adding token info: %w", err)
 	}
 
-	resetLink := fmt.Sprintf("https://yourfrontend.com/reset-password?token=%s", token)
+	// resetLink := fmt.Sprintf("https://yourfrontend.com/reset-password?token=%s", token)
 
-	err = o.SendResetEmail(email.Email, resetLink)
-	if err != nil {
-		return "", fmt.Errorf("error sending email: %w", err)
-	}
+	// err = o.SendResetEmail(email.Email, resetLink)
+	// if err != nil {
+	// 	return "", fmt.Errorf("error sending email: %w", err)
+	// }
 	return token, nil
 }
 
