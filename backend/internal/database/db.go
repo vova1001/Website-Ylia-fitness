@@ -32,12 +32,14 @@ func DB_Conect() {
 	fmt.Println("DB connected")
 
 	createTableProduct()
+	createTableVideo()
 	createTableBasket()
 	createTablePurchaseItems()
 	createTablePurchaseRequest()
 	createTableSuccessfulPurchases()
 }
 
+// сами курсы (4 шт)
 func createTableProduct() {
 	createTable := `
 	CREATE TABLE IF NOT EXISTS products (
@@ -45,7 +47,22 @@ func createTableProduct() {
 		product_name TEXT NOT NULL,
 		product_price DECIMAL(10,2) NOT NULL,
 		currency TEXT DEFAULT 'RUB',
-		url TEXT NOT NULL
+	);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table product", err)
+	}
+	fmt.Println("Table products created successefully")
+}
+
+// 12 видео под каждый из курсов (4 курса, 48 видео)
+func createTableVideo() {
+	createTable := `
+	CREATE TABLE IF NOT EXISTS products (
+		id SERIAL PRIMARY KEY,
+		url TEXT NOT NULL,
+		video_name TEXT NOT NULL,
 	);
 	`
 	_, err := DB.Exec(createTable)
