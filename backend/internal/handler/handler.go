@@ -196,6 +196,7 @@ func PurchesRequest(UserId int) (string, error) {
 	var PR m.PurchaseRequest
 	var items []m.PurchaseItem
 	rows, _ := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+	defer rows.Close()
 	for rows.Next() {
 		var item m.PurchaseItem
 		//Пусть перезаписывает почту, я так вижу :)
@@ -203,8 +204,6 @@ func PurchesRequest(UserId int) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("err scan from basket %w", err)
 		}
-
-		defer rows.Close()
 
 		PR.TotalAmount += item.ProductPrice
 		items = append(items, item)
