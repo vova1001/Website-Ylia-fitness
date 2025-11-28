@@ -313,7 +313,7 @@ func WebhookY(Webook m.YookassaWebhook) error {
 
 }
 
-func GetBasket(userID int) ([]m.Basket, error) {
+func GetBasket(userID int, email string) ([]m.Basket, error) {
 	var SliceBasket []m.Basket
 
 	rows, err := d.DB.Query(`SELECT product_id, product_name, product_price FROM basket WHERE user_id=$1`, userID)
@@ -325,6 +325,8 @@ func GetBasket(userID int) ([]m.Basket, error) {
 
 	for rows.Next() {
 		var ItemFromBasket m.Basket
+		ItemFromBasket.UserID = userID
+		ItemFromBasket.Email = email
 		err := rows.Scan(&ItemFromBasket.ProductID, &ItemFromBasket.ProductName, &ItemFromBasket.ProductPrice)
 		if err != nil {
 			return []m.Basket{}, fmt.Errorf("err scan Basket:%w", err)
