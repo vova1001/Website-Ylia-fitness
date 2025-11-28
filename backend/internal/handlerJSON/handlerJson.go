@@ -201,8 +201,14 @@ func GetBasketJSON(ctx *gin.Context) {
 		ctx.JSON(401, gin.H{"err": "User not found"})
 		return
 	}
+	Email, exists := ctx.Get("userEmail")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "Email not found"})
+		return
+	}
+	EmailStr := Email.(string)
 	UserIDint := UserID.(int)
-	SliceBasket, err := h.GetBasket(UserIDint)
+	SliceBasket, err := h.GetBasket(UserIDint, EmailStr)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return

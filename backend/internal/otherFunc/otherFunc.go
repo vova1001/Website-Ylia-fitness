@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/mail"
@@ -130,23 +131,45 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 
 func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.YookassaPaymentResponse, error) {
 
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
 	auth := base64.StdEncoding.EncodeToString([]byte(yc.ShopID + ":" + yc.ApiKey))
 
-	jsonData, _ := json.Marshal(req)
+	httpReq, err := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("request creation failed: %w", err)
+	}
 
-	httpReq, _ := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
 	httpReq.Header.Set("Authorization", "Basic "+auth)
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Idempotence-Key", fmt.Sprintf("%d", time.Now().UnixNano()))
 
+	httpReq.Header.Set("User-Agent", "GoClient/1.0")
+
+	log.Println("Sending request to Yookassa...")
+
 	resp, err := yc.Client.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http error: %w", err)
 	}
 	defer resp.Body.Close()
 
+	log.Println("Yookassa response code:", resp.StatusCode)
+
+	body, _ := io.ReadAll(resp.Body)
+	log.Println("Yookassa raw response:", string(body))
+
+	if resp.StatusCode >= 400 {
+		return nil, fmt.Errorf("yookassa returned error %d: %s", resp.StatusCode, body)
+	}
+
 	var paymentResp m.YookassaPaymentResponse
-	json.NewDecoder(resp.Body).Decode(&paymentResp)
+	if err := json.Unmarshal(body, &paymentResp); err != nil {
+		return nil, fmt.Errorf("json decode error: %w", err)
+	}
 
 	return &paymentResp, nil
 }
