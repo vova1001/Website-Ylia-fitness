@@ -99,7 +99,7 @@ func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
 	return &m.YookassaClient{
 		ShopID:  shopID,
 		ApiKey:  apiKey,
-		BaseURL: "https://api.yookassa.ru/v3",
+		BaseURL: "https://api.yookassa.ru/v3/",
 		Client: &http.Client{
 			Timeout: 30 * time.Second,
 		},
