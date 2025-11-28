@@ -348,29 +348,55 @@ func DeleteBasketItem(ProductID, UserID int) error {
 	return nil
 }
 
-// func GetCourse(userID int) ([]string, error) {
-// 	var CourseUrl []string
-// 	rows, err := d.DB.Query(`
-//         SELECT p.url
-//         FROM successful_purchases sp
-//         JOIN products p ON sp.product_id = p.id
-//         WHERE sp.user_id = $1`, userID)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("err query rows: %w", err)
-// 	}
-// 	defer rows.Close()
+func GetCourse(userID int) ([]string, error) {
+	var courseSlice []string
+	rows, err := d.DB.Query(`
+	SELECT product_id
+	FROM successful_purchases
+	WHERE user_id=$1
+	`, userID)
 
-// 	for rows.Next() {
-// 		var url string
-// 		if err := rows.Scan(&url); err != nil {
-// 			return nil, fmt.Errorf("err scan getcourse: %w", err)
-// 		}
-// 		CourseUrl = append(CourseUrl, url)
-// 	}
+	if err != nil {
+		return nil, fmt.Errorf("err query rows: %w", err)
+	}
 
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("rows iteration err: %w", err)
-// 	}
+	defer rows.Close()
 
-// 	return CourseUrl, nil
-// }
+	for rows.Next() {
+		var courseID string
+		err := rows.Scan(&courseID)
+		if err != nil {
+			return nil, fmt.Errorf("err scan course_id: %w", err)
+		}
+		courseSlice = append(courseSlice, courseID)
+	}
+
+	return courseSlice, nil
+}
+
+func PostVideo(userID, courseID int) (map[string]string, error) {
+	ResponseVideo := make(map[string]string)
+	rows, err := d.DB.Query(`
+		SELECT url, video_name
+		FROM video v
+		JOIN successful_purchases sp
+		ON sp.product_id=v.product_id
+		WHERE sp.user_id=$1 AND sp.product_id=$2 AND NOW()<sp.sub_end;
+	`, userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("err select url, vN:%w ", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var url, videoName string
+		err := rows.Scan(&url, &videoName)
+		if err != nil {
+			return nil, fmt.Errorf("err scan url, vN:%w ", err)
+		}
+		ResponseVideo[videoName] = url
+	}
+
+	return ResponseVideo, nil
+}

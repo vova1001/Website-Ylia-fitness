@@ -1,6 +1,7 @@
 package handlerJSON
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -13,7 +14,7 @@ import (
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
-func GetHethJSON(ctx *gin.Context) {
+func GetHelthJSON(ctx *gin.Context) {
 	ctx.JSON(200, "Server is running!")
 }
 
@@ -159,6 +160,7 @@ func AddBasketJSON(ctx *gin.Context) {
 	res, err := h.ProductAddBasket(UserIDint, IdProduct, EmailStr)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
 	}
 	ctx.JSON(200, res)
 }
@@ -230,17 +232,46 @@ func DeleteBasketJSON(ctx *gin.Context) {
 	ctx.JSON(200, "Item deleted from basket")
 }
 
-// func GetCourseJSON(ctx *gin.Context) {
-// 	userID, exists := ctx.Get("userID")
-// 	if !exists {
-// 		ctx.JSON(401, gin.H{"err": "User not found"})
-// 		return
-// 	}
-// 	UserIDint := userID.(int)
-// 	ResURL, err := h.GetCourse(UserIDint)
-// 	if err != nil {
-// 		ctx.JSON(500, gin.H{"err": err.Error()})
-// 		return
-// 	}
-// 	ctx.JSON(200, ResURL)
-// }
+func GetCourseJSON(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+	ResURLCourse, err := h.GetCourse(UserIDint)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, ResURLCourse)
+}
+
+func PostVideoJSON(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+
+	res, err := ctx.GetRawData()
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err.Error()})
+		return
+	}
+	var msg map[string]int
+	err = json.Unmarshal(res, &msg)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err.Error()})
+		return
+	}
+	courseID := msg["course_id"]
+
+	ResVideo, err := h.PostVideo(UserIDint, courseID)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, ResVideo)
+}
