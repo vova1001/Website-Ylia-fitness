@@ -33,10 +33,10 @@ func GeneratorToken(n int) (string, error) {
 }
 
 func SendResetEmail(toEmail, resetLink string) error {
-	from := "yliafitness_helper@mail.ru"
-	pass := "Eud610DCBf9Ju0UTjWRy"
-	smtpHost := "smtp.mail.ru"
-	smtpPort := "587"
+	from := os.Getenv("EMAIL_BOT")
+	pass := os.Getenv("EMAIL_BOT_PASS")
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
 
 	log.Println("[EMAIL] Step 1: starting function")
 

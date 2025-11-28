@@ -46,7 +46,7 @@ func createTableProduct() {
 		id SERIAL PRIMARY KEY,
 		product_name TEXT NOT NULL,
 		product_price DECIMAL(10,2) NOT NULL,
-		currency TEXT DEFAULT 'RUB',
+		currency TEXT DEFAULT 'RUB'
 	);
 	`
 	_, err := DB.Exec(createTable)
@@ -59,17 +59,18 @@ func createTableProduct() {
 // 12 видео под каждый из курсов (4 курса, 48 видео)
 func createTableVideo() {
 	createTable := `
-	CREATE TABLE IF NOT EXISTS products (
+	CREATE TABLE IF NOT EXISTS video (
 		id SERIAL PRIMARY KEY,
+		product_id INTEGER NOT NULL,
 		url TEXT NOT NULL,
-		video_name TEXT NOT NULL,
+		video_name TEXT NOT NULL
 	);
 	`
 	_, err := DB.Exec(createTable)
 	if err != nil {
-		log.Fatal("Error created table product", err)
+		log.Fatal("Error created table video", err)
 	}
-	fmt.Println("Table products created successefully")
+	fmt.Println("Table video created successefully")
 }
 
 func createTablePurchaseRequest() {
