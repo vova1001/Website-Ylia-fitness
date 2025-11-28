@@ -130,31 +130,25 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 	return SendRequest(yc, req)
 }
 
-// SendRequest отправляет платеж на Yookassa и возвращает ссылку на оплату
 func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.YookassaPaymentResponse, error) {
-	// Marshal тела запроса
 	jsonData, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal error: %w", err)
 	}
 	log.Println("Prepared request JSON:", string(jsonData))
 
-	// Создаем HTTP-запрос
 	httpReq, err := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
-	// ---------- Исправление: используем SetBasicAuth ----------
 	httpReq.SetBasicAuth(yc.ShopID, yc.ApiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
-	// ---------- Исправление: UUID для Idempotence-Key ----------
 	httpReq.Header.Set("Idempotence-Key", uuid.New().String())
 	httpReq.Header.Set("User-Agent", "GoClient/1.0")
 
 	log.Println("Sending request to Yookassa...")
 
-	// Отправляем запрос
 	resp, err := yc.Client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("http error: %w", err)
@@ -163,28 +157,23 @@ func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.Yookas
 
 	log.Println("HTTP request sent, waiting for response...")
 
-	// Читаем тело ответа
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
-	// Логируем код ответа и тело для отладки
 	log.Println("Yookassa response code:", resp.StatusCode)
 	log.Println("Yookassa raw response:", string(body))
 
-	// Проверка кода ответа
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("yookassa returned error %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Декодируем JSON
 	var paymentResp m.YookassaPaymentResponse
 	if err := json.Unmarshal(body, &paymentResp); err != nil {
 		return nil, fmt.Errorf("json decode error: %w", err)
 	}
 
-	// Проверяем, что confirmation_url есть
 	if paymentResp.Confirmation.ConfirmationURL == "" {
 		return nil, fmt.Errorf("confirmation_url пустой, raw response: %s", string(body))
 	}

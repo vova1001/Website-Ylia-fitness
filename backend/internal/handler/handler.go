@@ -234,7 +234,7 @@ func PurchesRequest(UserId int) (string, error) {
 
 	var PurchaseRequestsID int
 	err = d.DB.QueryRow(`
-		INSERT INTO purchase_requests
+		INSERT INTO purchase_request
 		(user_id, email, total_amount, payment_id, created_at)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
@@ -250,7 +250,7 @@ func PurchesRequest(UserId int) (string, error) {
 
 	for _, item := range items {
 		_, err := d.DB.Exec(`
-			INSERT INTO purchase_items
+			INSERT INTO purchase_item
 			(purchase_request_id, product_id, product_name, product_price)
 			VALUES ($1, $2, $3, $4)
 			`, PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice)
@@ -272,17 +272,17 @@ func WebhookY(Webook m.YookassaWebhook) error {
 
 	err := d.DB.QueryRow(`
     SELECT user_id, email, payment_id, id
-    FROM purchase_requests 
+    FROM purchase_request 
     WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
 	if err != nil {
-		return fmt.Errorf("err scan from purchase_requests")
+		return fmt.Errorf("err scan from purchase_request")
 	}
 	PurchasePaid.SubStart = time.Now()
 	PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
 
 	rows, _ := d.DB.Query(`
 		SELECT product_id, product_name, product_price 
-		FROM purchase_items
+		FROM purchase_item
 		WHERE purchase_request_id=$1
 	`, PurchasePaid.ID)
 
