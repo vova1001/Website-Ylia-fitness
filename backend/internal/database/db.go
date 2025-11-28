@@ -93,7 +93,7 @@ func createTablePurchaseRequest() {
 
 func createTablePurchaseItems() {
 	createTable := `
-		CREATE TABLE IF NOT EXISTS purchase_items(
+		CREATE TABLE IF NOT EXISTS purchase_item(
 			id SERIAL PRIMARY KEY,
 			purchase_request_id INTEGER NOT NULL REFERENCES purchase_request(id) ON DELETE CASCADE,
 			product_id INTEGER NOT NULL,
