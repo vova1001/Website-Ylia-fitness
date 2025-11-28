@@ -165,7 +165,7 @@ func AddBasketJSON(ctx *gin.Context) {
 	ctx.JSON(200, res)
 }
 
-func PurchaseJSON(ctx *gin.Context) {
+func GetPurchaseJSON(ctx *gin.Context) {
 	UserID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
@@ -239,12 +239,12 @@ func GetCourseJSON(ctx *gin.Context) {
 		return
 	}
 	UserIDint := userID.(int)
-	ResURLCourse, err := h.GetCourse(UserIDint)
+	ResCourse, err := h.GetCourse(UserIDint)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
-	ctx.JSON(200, ResURLCourse)
+	ctx.JSON(200, ResCourse)
 }
 
 func PostVideoJSON(ctx *gin.Context) {

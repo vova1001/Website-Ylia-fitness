@@ -25,7 +25,7 @@ func RegisterRoutes(r *gin.Engine) {
 	auth.Use(h.JWT_Middleware())
 	{
 		auth.GET("/hi", h.GetAuthJson)
-		auth.POST("/purchase", h.PurchaseJSON)
+		auth.GET("/purchase", h.GetPurchaseJSON)
 		auth.GET("/basket", h.GetBasketJSON)
 		auth.POST("/basket/add", h.AddBasketJSON)
 		auth.DELETE("/basekt/item", h.DeleteBasketJSON)
