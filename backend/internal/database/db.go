@@ -34,8 +34,8 @@ func DB_Conect() {
 	createTableProduct()
 	createTableVideo()
 	createTableBasket()
-	createTablePurchaseItems()
 	createTablePurchaseRequest()
+	createTablePurchaseItems()
 	createTableSuccessfulPurchases()
 }
 
