@@ -203,6 +203,9 @@ func PurchesRequest(UserId int) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("err scan from basket %w", err)
 		}
+
+		defer rows.Close()
+
 		PR.TotalAmount += item.ProductPrice
 		items = append(items, item)
 	}
@@ -234,7 +237,7 @@ func PurchesRequest(UserId int) (string, error) {
 	err = d.DB.QueryRow(`
 		INSERT INTO purchase_requests
 		(user_id, email, total_amount, payment_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
 		PR.UserID,
 		PR.Email,
