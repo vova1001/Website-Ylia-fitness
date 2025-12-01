@@ -6,21 +6,47 @@ import (
 	metrics "github.com/vova1001/Website-Ylia-fitness/internal/metrics"
 	rout "github.com/vova1001/Website-Ylia-fitness/internal/routes"
 
-	"log"
-	"net"
+	"encoding/base64"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 )
 
 func main() {
-	ip := "109.235.165.99:443"
-	log.Println("Testing TCP connection to", ip)
-	conn, err := net.DialTimeout("tcp", ip, 10*time.Second)
+	shopID := "1199000"
+	apiKey := "live_mwZWuqw-qJGp7UYnoHzk5UGA-2dIEHviUQ4Vrc3rHIo"
+
+	client := &http.Client{Timeout: 10 * time.Second}
+
+	req, err := http.NewRequest("GET", "https://api.yookassa.ru/v3/payments", nil)
 	if err != nil {
-		log.Println("TCP connection failed:", err)
-	} else {
-		log.Println("TCP connection succeeded")
-		conn.Close()
+		fmt.Println("Error creating request:", err)
+		return
 	}
+
+	// Базовая авторизация
+	auth := base64.StdEncoding.EncodeToString([]byte(shopID + ":" + apiKey))
+	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("User-Agent", "GoTestClient/1.0")
+
+	fmt.Println("Sending request to Yookassa...")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println("Error sending request:", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println("Error reading response body:", err)
+		return
+	}
+
+	fmt.Println("Status:", resp.Status)
+	fmt.Println("Body:", string(body))
 
 	metrics.MetricsInit()
 	d.DB_Conect()
