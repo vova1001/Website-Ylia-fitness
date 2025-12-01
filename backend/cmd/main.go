@@ -17,7 +17,7 @@ func main() {
 	shopID := "1199000"
 	apiKey := "live_mwZWuqw-qJGp7UYnoHzk5UGA-2dIEHviUQ4Vrc3rHIo"
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 
 	req, err := http.NewRequest("GET", "https://api.yookassa.ru/v3/payments", nil)
 	if err != nil {
