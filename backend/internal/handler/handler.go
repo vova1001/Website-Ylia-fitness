@@ -220,14 +220,9 @@ func PurchesRequest(UserId int) (string, error) {
 		items = append(items, item)
 	}
 
-	if len(items) == 0 {
-		return "", fmt.Errorf("корзина пустая")
-	}
-
 	PR.CreateadAt = time.Now()
 	PR.UserID = UserId
 
-	// Формируем описание для Юкасса
 	var NamesItemsFromYK string
 	if len(items) > 1 {
 		NamesItemsFromYK = "Оплата товаров"
@@ -238,16 +233,18 @@ func PurchesRequest(UserId int) (string, error) {
 		NamesItemsFromYK += fmt.Sprintf(", %s", item.ProductName)
 	}
 
-	// URL твоего Cloudflare Worker
-	workerURL := "https://yookassa-worker.vovaoleshko05.workers.dev"
+	// Клиент Юкасса напрямую
+	yc := o.NewYookassaClient(
+		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+		o.GetEnv("YOOKASSA_API_KEY", ""),
+	)
 
-	resp, err := o.CreatePayment(workerURL, PR.TotalAmount, NamesItemsFromYK)
+	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK)
 	if err != nil {
-		return "", fmt.Errorf("err create payment via worker: %w", err)
+		return "", fmt.Errorf("err create payment: %w", err)
 	}
 	PR.PaymentID = resp.ID
 
-	// Сохраняем заказ в БД
 	var PurchaseRequestsID int
 	err = d.DB.QueryRow(`
 		INSERT INTO purchase_request
@@ -278,7 +275,6 @@ func PurchesRequest(UserId int) (string, error) {
 
 	return resp.Confirmation.ConfirmationURL, nil
 }
-
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.PurchasePaid
 	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {

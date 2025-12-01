@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
+
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
@@ -105,8 +107,7 @@ func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
 	}
 }
 
-func CreatePayment(workerURL string, amount float64, description string) (*m.YookassaPaymentResponse, error) {
-	// Формируем тело запроса
+func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m.YookassaPaymentResponse, error) {
 	req := &m.YookassaPaymentRequest{
 		Amount: struct {
 			Value    string `json:"value"`
@@ -131,15 +132,17 @@ func CreatePayment(workerURL string, amount float64, description string) (*m.Yoo
 		return nil, fmt.Errorf("marshal error: %w", err)
 	}
 
-	// POST к Cloudflare Worker
-	httpReq, err := http.NewRequest("POST", workerURL, bytes.NewBuffer(jsonData))
+	httpReq, err := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
-	httpReq.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 60 * time.Second}
-	resp, err := client.Do(httpReq)
+	httpReq.SetBasicAuth(yc.ShopID, yc.ApiKey)
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Idempotence-Key", uuid.New().String())
+	httpReq.Header.Set("User-Agent", "GoClient/1.0")
+
+	resp, err := yc.Client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("http error: %w", err)
 	}
@@ -148,6 +151,10 @@ func CreatePayment(workerURL string, amount float64, description string) (*m.Yoo
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("yookassa returned error %d: %s", resp.StatusCode, string(body))
 	}
 
 	var paymentResp m.YookassaPaymentResponse
