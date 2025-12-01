@@ -101,7 +101,7 @@ func AuthUser(User m.User) (m.Token, error) {
 
 }
 
-func FogotPass(email m.FogotPass) (string, error) {
+func FogotPass(email m.FogotPass) error {
 	var exist bool
 	var tokenNP m.TokenNewPass
 
@@ -109,10 +109,10 @@ func FogotPass(email m.FogotPass) (string, error) {
 
 	err := d.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email.Email).Scan(&exist)
 	if err != nil {
-		return "", fmt.Errorf("error checking existing user: %w", err)
+		return fmt.Errorf("error checking existing user: %w", err)
 	}
 	if !exist {
-		return "", fmt.Errorf("there is no user with this email, please register")
+		return fmt.Errorf("there is no user with this email, please register")
 	}
 	createTable := `
 	CREATE TABLE IF NOT EXISTS password_resets(
@@ -125,11 +125,11 @@ func FogotPass(email m.FogotPass) (string, error) {
 	`
 	_, err = d.DB.Exec(createTable)
 	if err != nil {
-		return "", fmt.Errorf("table password_resets not created: %w", err)
+		return fmt.Errorf("table password_resets not created: %w", err)
 	}
 	token, err := o.GeneratorToken(32)
 	if err != nil {
-		return "", err
+		return err
 	}
 	log.Printf("DEBUG reset token for %s = %s\n", email.Email, token)
 	_, err = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email.Email)
@@ -139,16 +139,16 @@ func FogotPass(email m.FogotPass) (string, error) {
 	tokenNP.TimeLife = time.Now().Add(time.Minute * 15)
 	_, err = d.DB.Exec("INSERT INTO password_resets(email, token_hash, time_life) VALUES($1,$2,$3)", email.Email, tokenNP.HashToken, tokenNP.TimeLife)
 	if err != nil {
-		return "", fmt.Errorf("error adding token info: %w", err)
+		return fmt.Errorf("error adding token info: %w", err)
 	}
 
 	resetLink := fmt.Sprintf("https://website-ylia-fitness-frontend.onrender.com/?token=%s", token)
 
 	err = o.SendResetEmail(email.Email, resetLink)
 	if err != nil {
-		return "", fmt.Errorf("error sending email: %w", err)
+		return fmt.Errorf("error sending email: %w", err)
 	}
-	return token, nil
+	return nil
 }
 
 func ResetPassword(NewPass m.NewPass) error {
@@ -204,27 +204,30 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 func PurchesRequest(UserId int) (string, error) {
 	var PR m.PurchaseRequest
 	var items []m.PurchaseItem
-	rows, _ := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+
+	rows, err := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+	if err != nil {
+		return "", fmt.Errorf("err query basket: %w", err)
+	}
 	defer rows.Close()
+
 	for rows.Next() {
 		var item m.PurchaseItem
-		//Пусть перезаписывает почту, я так вижу :)
-		err := rows.Scan(&PR.Email, &item.ProductID, &item.ProductName, &item.ProductPrice)
-		if err != nil {
-			return "", fmt.Errorf("err scan from basket %w", err)
+		if err := rows.Scan(&PR.Email, &item.ProductID, &item.ProductName, &item.ProductPrice); err != nil {
+			return "", fmt.Errorf("err scan from basket: %w", err)
 		}
-
 		PR.TotalAmount += item.ProductPrice
 		items = append(items, item)
 	}
+
+	if len(items) == 0 {
+		return "", fmt.Errorf("корзина пустая")
+	}
+
 	PR.CreateadAt = time.Now()
 	PR.UserID = UserId
-	PR.PaymentID = ""
-	yc := o.NewYookassaClient(
-		o.GetEnv("YOOKASSA_SHOP_ID", ""),
-		o.GetEnv("YOOKASSA_API_KEY", ""),
-	)
 
+	// Формируем описание для Юкасса
 	var NamesItemsFromYK string
 	if len(items) > 1 {
 		NamesItemsFromYK = "Оплата товаров"
@@ -232,15 +235,19 @@ func PurchesRequest(UserId int) (string, error) {
 		NamesItemsFromYK = "Оплата товара"
 	}
 	for _, item := range items {
-		NamesItemsFromYK += fmt.Sprintf(",%s", item.ProductName)
+		NamesItemsFromYK += fmt.Sprintf(", %s", item.ProductName)
 	}
 
-	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK)
+	// URL твоего Cloudflare Worker
+	workerURL := "https://yookassa-worker.vovaoleshko05.workers.dev"
+
+	resp, err := o.CreatePayment(workerURL, PR.TotalAmount, NamesItemsFromYK)
 	if err != nil {
-		return "", fmt.Errorf("err create payment %w", err)
+		return "", fmt.Errorf("err create payment via worker: %w", err)
 	}
 	PR.PaymentID = resp.ID
 
+	// Сохраняем заказ в БД
 	var PurchaseRequestsID int
 	err = d.DB.QueryRow(`
 		INSERT INTO purchase_request
@@ -261,8 +268,9 @@ func PurchesRequest(UserId int) (string, error) {
 		_, err := d.DB.Exec(`
 			INSERT INTO purchase_item
 			(purchase_request_id, product_id, product_name, product_price)
-			VALUES ($1, $2, $3, $4)
-			`, PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice)
+			VALUES ($1, $2, $3, $4)`,
+			PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice,
+		)
 		if err != nil {
 			return "", fmt.Errorf("err insert purchase_item: %w", err)
 		}
