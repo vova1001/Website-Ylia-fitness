@@ -15,8 +15,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
@@ -107,7 +105,8 @@ func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
 	}
 }
 
-func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m.YookassaPaymentResponse, error) {
+func CreatePayment(workerURL string, amount float64, description string) (*m.YookassaPaymentResponse, error) {
+	// Формируем тело запроса
 	req := &m.YookassaPaymentRequest{
 		Amount: struct {
 			Value    string `json:"value"`
@@ -127,46 +126,28 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 		},
 	}
 
-	return SendRequest(yc, req)
-}
-
-func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.YookassaPaymentResponse, error) {
 	jsonData, err := json.Marshal(req)
 	if err != nil {
 		return nil, fmt.Errorf("marshal error: %w", err)
 	}
-	log.Println("Prepared request JSON:", string(jsonData))
 
-	httpReq, err := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
+	// POST к Cloudflare Worker
+	httpReq, err := http.NewRequest("POST", workerURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
-
-	httpReq.SetBasicAuth(yc.ShopID, yc.ApiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Idempotence-Key", uuid.New().String())
-	httpReq.Header.Set("User-Agent", "GoClient/1.0")
 
-	log.Println("Sending request to Yookassa...")
-
-	resp, err := yc.Client.Do(httpReq)
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("http error: %w", err)
 	}
 	defer resp.Body.Close()
 
-	log.Println("HTTP request sent, waiting for response...")
-
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error reading response body: %w", err)
-	}
-
-	log.Println("Yookassa response code:", resp.StatusCode)
-	log.Println("Yookassa raw response:", string(body))
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("yookassa returned error %d: %s", resp.StatusCode, string(body))
 	}
 
 	var paymentResp m.YookassaPaymentResponse
@@ -177,8 +158,6 @@ func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.Yookas
 	if paymentResp.Confirmation.ConfirmationURL == "" {
 		return nil, fmt.Errorf("confirmation_url пустой, raw response: %s", string(body))
 	}
-
-	log.Println("Payment created successfully, confirmation_url:", paymentResp.Confirmation.ConfirmationURL)
 
 	return &paymentResp, nil
 }

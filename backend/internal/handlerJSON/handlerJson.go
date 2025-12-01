@@ -114,12 +114,12 @@ func FogotPassJSON(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-	token, err := h.FogotPass(email)
+	err = h.FogotPass(email)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
-	ctx.JSON(200, token)
+	ctx.JSON(200, "Good")
 }
 
 func ResetPasswordJSON(ctx *gin.Context) {
