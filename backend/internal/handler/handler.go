@@ -391,8 +391,8 @@ func GetCourse(userID int) ([]string, error) {
 	return courseSlice, nil
 }
 
-func PostVideo(userID, courseID int) (map[string]string, error) {
-	ResponseVideo := make(map[string]string)
+func PostVideo(userID, courseID int) ([]m.VideoResponse, error) {
+	var SliceVideoResponse []m.VideoResponse
 	rows, err := d.DB.Query(`
 		SELECT url, video_name
 		FROM video v
@@ -407,13 +407,13 @@ func PostVideo(userID, courseID int) (map[string]string, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var url, videoName string
-		err := rows.Scan(&url, &videoName)
+		var Video m.VideoResponse
+		err := rows.Scan(&Video.URL, &Video.VideoName)
 		if err != nil {
 			return nil, fmt.Errorf("err scan url, vN:%w ", err)
 		}
-		ResponseVideo[videoName] = url
+		SliceVideoResponse = append(SliceVideoResponse, Video)
 	}
 
-	return ResponseVideo, nil
+	return SliceVideoResponse, nil
 }

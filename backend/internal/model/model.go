@@ -76,6 +76,11 @@ type Basket struct {
 	ProductPrice float64
 }
 
+type VideoResponse struct {
+	URL       string
+	VideoName string
+}
+
 type DeleteBasketItem struct {
 	ID int `json:"delete_item_id"`
 }
