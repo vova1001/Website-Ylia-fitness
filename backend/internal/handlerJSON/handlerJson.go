@@ -3,6 +3,7 @@ package handlerJSON
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -162,6 +163,7 @@ func AddBasketJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	log.Println("Course added to basket")
 	ctx.JSON(200, res)
 }
 
@@ -193,6 +195,7 @@ func WebhookJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	ctx.JSON(200, "Successfull payment!!!")
 }
 
 func GetBasketJSON(ctx *gin.Context) {
@@ -213,6 +216,7 @@ func GetBasketJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	log.Println("Courses from basket")
 	ctx.JSON(200, SliceBasket)
 
 }
@@ -250,6 +254,7 @@ func GetCourseJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	log.Println("Purchased courses")
 	ctx.JSON(200, ResCourse)
 }
 
@@ -279,5 +284,6 @@ func PostVideoJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	log.Println("Video sending!)")
 	ctx.JSON(200, ResVideo)
 }
