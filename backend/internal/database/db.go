@@ -4,22 +4,24 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"os"
 
 	_ "github.com/lib/pq"
-
-	o "github.com/vova1001/Website-Ylia-fitness/internal/otherFunc"
 )
 
 var DB *sql.DB
 
 func DB_Conect() {
-	dbHost := o.GetEnv("DB_HOST", "postgres")
-	dbPort := o.GetEnv("DB_PORT", "5432")
-	dbUser := o.GetEnv("DB_USER", "myuser")
-	dbPassword := o.GetEnv("DB_PASSWORD", "mypassword")
-	dbName := o.GetEnv("DB_NAME", "mydb")
-	dbSSLMode := o.GetEnv("DB_SSLMODE", "disable")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbName := os.Getenv("DB_NAME")
+	dbSSLMode := os.Getenv("DB_SSLMODE")
 
+	if dbHost == "" || dbUser == "" || dbPassword == "" || dbName == "" || dbSSLMode == "" {
+		log.Fatal("Database environment variables not set")
+	}
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		dbHost, dbPort, dbUser, dbPassword, dbName, dbSSLMode)
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -28,6 +29,8 @@ func RegisterNewUser(NewUser m.User) error {
 		return fmt.Errorf("table users not created: %w", err)
 	}
 	log.Println("Table Users created")
+
+	NewUser.Email = strings.ToLower(NewUser.Email)
 
 	if !o.EmailCheck(NewUser.Email) {
 		return fmt.Errorf("invalid email: %s", NewUser.Email)
@@ -60,6 +63,9 @@ func AuthUser(User m.User) (m.Token, error) {
 	var exist bool
 	var UserPass string
 	var UserID int
+
+	User.Email = strings.ToLower(User.Email)
+
 	if !o.EmailCheck(User.Email) {
 		return m.Token{}, fmt.Errorf("invalid email: %s", User.Email)
 	}
@@ -98,6 +104,9 @@ func AuthUser(User m.User) (m.Token, error) {
 func FogotPass(email m.FogotPass) error {
 	var exist bool
 	var tokenNP m.TokenNewPass
+
+	email.Email = strings.ToLower(email.Email)
+
 	err := d.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email.Email).Scan(&exist)
 	if err != nil {
 		return fmt.Errorf("error checking existing user: %w", err)
