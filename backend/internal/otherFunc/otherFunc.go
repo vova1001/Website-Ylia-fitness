@@ -3,16 +3,19 @@ package otherfunc
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
+	"log"
 	"net/http"
 	"net/mail"
 	"net/smtp"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
@@ -32,10 +35,12 @@ func GeneratorToken(n int) (string, error) {
 }
 
 func SendResetEmail(toEmail, resetLink string) error {
-	from := "yliafitness_helper@mail.ru"
-	pass := "aWfFfGRklLhggzbyfwfu"
-	smtpHost := "smtp.mail.ru"
-	smtpPort := "587"
+	from := os.Getenv("EMAIL_BOT")
+	pass := os.Getenv("EMAIL_BOT_PASS")
+	smtpHost := os.Getenv("SMTP_HOST")
+	smtpPort := os.Getenv("SMTP_PORT")
+
+	log.Println("[EMAIL] Step 1: starting function")
 
 	switch {
 	case strings.HasSuffix(toEmail, "@mail.ru"):
@@ -45,6 +50,8 @@ func SendResetEmail(toEmail, resetLink string) error {
 	case strings.HasSuffix(toEmail, "@rambler.ru"):
 		smtpHost = "smtp.rambler.ru"
 	}
+
+	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost)
 
 	htmlBody := fmt.Sprintf(`
     <html>
@@ -71,6 +78,8 @@ func SendResetEmail(toEmail, resetLink string) error {
 		"Content-Type: text/html; charset=\"UTF-8\"\n\n" +
 		htmlBody
 
+	log.Println("[EMAIL] Step 3: calling SendMail...")
+
 	return smtp.SendMail(
 		smtpHost+":"+smtpPort,
 		smtp.PlainAuth("", from, pass, smtpHost),
@@ -93,7 +102,7 @@ func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
 		ApiKey:  apiKey,
 		BaseURL: "https://api.yookassa.ru/v3",
 		Client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 60 * time.Second,
 		},
 	}
 }
@@ -118,28 +127,44 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 		},
 	}
 
-	return SendRequest(yc, req)
-}
+	jsonData, err := json.Marshal(req)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
 
-func SendRequest(yc *m.YookassaClient, req *m.YookassaPaymentRequest) (*m.YookassaPaymentResponse, error) {
+	httpReq, err := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return nil, fmt.Errorf("request creation failed: %w", err)
+	}
 
-	auth := base64.StdEncoding.EncodeToString([]byte(yc.ShopID + ":" + yc.ApiKey))
-
-	jsonData, _ := json.Marshal(req)
-
-	httpReq, _ := http.NewRequest("POST", yc.BaseURL+"/payments", bytes.NewBuffer(jsonData))
-	httpReq.Header.Set("Authorization", "Basic "+auth)
+	httpReq.SetBasicAuth(yc.ShopID, yc.ApiKey)
 	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Idempotence-Key", fmt.Sprintf("%d", time.Now().UnixNano()))
+	httpReq.Header.Set("Idempotence-Key", uuid.New().String())
+	httpReq.Header.Set("User-Agent", "GoClient/1.0")
 
 	resp, err := yc.Client.Do(httpReq)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http error: %w", err)
 	}
 	defer resp.Body.Close()
 
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("yookassa returned error %d: %s", resp.StatusCode, string(body))
+	}
+
 	var paymentResp m.YookassaPaymentResponse
-	json.NewDecoder(resp.Body).Decode(&paymentResp)
+	if err := json.Unmarshal(body, &paymentResp); err != nil {
+		return nil, fmt.Errorf("json decode error: %w", err)
+	}
+
+	if paymentResp.Confirmation.ConfirmationURL == "" {
+		return nil, fmt.Errorf("confirmation_url пустой, raw response: %s", string(body))
+	}
 
 	return &paymentResp, nil
 }

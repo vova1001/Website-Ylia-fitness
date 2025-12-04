@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -28,6 +29,8 @@ func RegisterNewUser(NewUser m.User) error {
 		return fmt.Errorf("table users not created: %w", err)
 	}
 	log.Println("Table Users created")
+
+	NewUser.Email = strings.ToLower(NewUser.Email)
 
 	if !o.EmailCheck(NewUser.Email) {
 		return fmt.Errorf("invalid email: %s", NewUser.Email)
@@ -60,6 +63,9 @@ func AuthUser(User m.User) (m.Token, error) {
 	var exist bool
 	var UserPass string
 	var UserID int
+
+	User.Email = strings.ToLower(User.Email)
+
 	if !o.EmailCheck(User.Email) {
 		return m.Token{}, fmt.Errorf("invalid email: %s", User.Email)
 	}
@@ -95,15 +101,18 @@ func AuthUser(User m.User) (m.Token, error) {
 
 }
 
-func FogotPass(email m.FogotPass) (string, error) {
+func FogotPass(email m.FogotPass) error {
 	var exist bool
 	var tokenNP m.TokenNewPass
+
+	email.Email = strings.ToLower(email.Email)
+
 	err := d.DB.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)", email.Email).Scan(&exist)
 	if err != nil {
-		return "", fmt.Errorf("error checking existing user: %w", err)
+		return fmt.Errorf("error checking existing user: %w", err)
 	}
 	if !exist {
-		return "", fmt.Errorf("there is no user with this email, please register")
+		return fmt.Errorf("there is no user with this email, please register")
 	}
 	createTable := `
 	CREATE TABLE IF NOT EXISTS password_resets(
@@ -116,29 +125,30 @@ func FogotPass(email m.FogotPass) (string, error) {
 	`
 	_, err = d.DB.Exec(createTable)
 	if err != nil {
-		return "", fmt.Errorf("table password_resets not created: %w", err)
+		return fmt.Errorf("table password_resets not created: %w", err)
 	}
 	token, err := o.GeneratorToken(32)
 	if err != nil {
-		return "", err
+		return err
 	}
 	log.Printf("DEBUG reset token for %s = %s\n", email.Email, token)
-	_, _ = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email)
+	_, err = d.DB.Exec("DELETE FROM password_resets WHERE email=$1 AND used=FALSE", email.Email)
+
 	hash := sha256.Sum256([]byte(token))
 	tokenNP.HashToken = hex.EncodeToString(hash[:])
 	tokenNP.TimeLife = time.Now().Add(time.Minute * 15)
 	_, err = d.DB.Exec("INSERT INTO password_resets(email, token_hash, time_life) VALUES($1,$2,$3)", email.Email, tokenNP.HashToken, tokenNP.TimeLife)
 	if err != nil {
-		return "", fmt.Errorf("error adding token info: %w", err)
+		return fmt.Errorf("error adding token info: %w", err)
 	}
 
-	resetLink := fmt.Sprintf("https://yourfrontend.com/reset-password?token=%s", token)
+	resetLink := fmt.Sprintf("https://website-ylia-fitness-frontend.onrender.com/?token=%s", token)
 
 	err = o.SendResetEmail(email.Email, resetLink)
 	if err != nil {
-		return "", fmt.Errorf("error sending email: %w", err)
+		return fmt.Errorf("error sending email: %w", err)
 	}
-	return token, nil
+	return nil
 }
 
 func ResetPassword(NewPass m.NewPass) error {
@@ -177,7 +187,7 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 
 	_, err = d.DB.Exec(`
 		INSERT INTO basket 
-		(user_id, email, product_id, product_name, product_price)
+		(user_id, email, product_id, product_name, product_price )
 		VALUES ($1, $2, $3, $4, $5)`,
 		Basket.UserID,
 		Basket.Email,
@@ -194,24 +204,24 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 func PurchesRequest(UserId int) (string, error) {
 	var PR m.PurchaseRequest
 	var items []m.PurchaseItem
-	rows, _ := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+
+	rows, err := d.DB.Query("SELECT email, product_id, product_name, product_price FROM basket WHERE user_id=$1", UserId)
+	if err != nil {
+		return "", fmt.Errorf("err query basket: %w", err)
+	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var item m.PurchaseItem
-		//Пусть перезаписывает почту, я так вижу :)
-		err := rows.Scan(&PR.Email, &item.ProductID, &item.ProductName, &item.ProductPrice)
-		if err != nil {
-			return "", fmt.Errorf("err scan from basket %w", err)
+		if err := rows.Scan(&PR.Email, &item.ProductID, &item.ProductName, &item.ProductPrice); err != nil {
+			return "", fmt.Errorf("err scan from basket: %w", err)
 		}
 		PR.TotalAmount += item.ProductPrice
 		items = append(items, item)
 	}
+
 	PR.CreateadAt = time.Now()
 	PR.UserID = UserId
-	PR.PaymentID = ""
-	yc := o.NewYookassaClient(
-		o.GetEnv("YOOKASSA_SHOP_ID", ""),
-		o.GetEnv("YOOKASSA_API_KEY", ""),
-	)
 
 	var NamesItemsFromYK string
 	if len(items) > 1 {
@@ -220,20 +230,26 @@ func PurchesRequest(UserId int) (string, error) {
 		NamesItemsFromYK = "Оплата товара"
 	}
 	for _, item := range items {
-		NamesItemsFromYK += fmt.Sprintf(",%s", item.ProductName)
+		NamesItemsFromYK += fmt.Sprintf(", %s", item.ProductName)
 	}
+
+	// Клиент Юкасса напрямую
+	yc := o.NewYookassaClient(
+		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+		o.GetEnv("YOOKASSA_API_KEY", ""),
+	)
 
 	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK)
 	if err != nil {
-		return "", fmt.Errorf("err create payment %w", err)
+		return "", fmt.Errorf("err create payment: %w", err)
 	}
 	PR.PaymentID = resp.ID
 
 	var PurchaseRequestsID int
 	err = d.DB.QueryRow(`
-		INSERT INTO purchase_requests
+		INSERT INTO purchase_request
 		(user_id, email, total_amount, payment_id, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id`,
 		PR.UserID,
 		PR.Email,
@@ -247,10 +263,11 @@ func PurchesRequest(UserId int) (string, error) {
 
 	for _, item := range items {
 		_, err := d.DB.Exec(`
-			INSERT INTO purchase_items
+			INSERT INTO purchase_item
 			(purchase_request_id, product_id, product_name, product_price)
-			VALUES ($1, $2, $3, $4)
-			`, PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice)
+			VALUES ($1, $2, $3, $4)`,
+			PurchaseRequestsID, item.ProductID, item.ProductName, item.ProductPrice,
+		)
 		if err != nil {
 			return "", fmt.Errorf("err insert purchase_item: %w", err)
 		}
@@ -258,7 +275,6 @@ func PurchesRequest(UserId int) (string, error) {
 
 	return resp.Confirmation.ConfirmationURL, nil
 }
-
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.PurchasePaid
 	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {
@@ -269,17 +285,17 @@ func WebhookY(Webook m.YookassaWebhook) error {
 
 	err := d.DB.QueryRow(`
     SELECT user_id, email, payment_id, id
-    FROM purchase_requests 
+    FROM purchase_request 
     WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
 	if err != nil {
-		return fmt.Errorf("err scan from purchase_requests")
+		return fmt.Errorf("err scan from purchase_request")
 	}
 	PurchasePaid.SubStart = time.Now()
 	PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
 
 	rows, _ := d.DB.Query(`
 		SELECT product_id, product_name, product_price 
-		FROM purchase_items
+		FROM purchase_item
 		WHERE purchase_request_id=$1
 	`, PurchasePaid.ID)
 
@@ -309,7 +325,7 @@ func WebhookY(Webook m.YookassaWebhook) error {
 
 }
 
-func GetBasket(userID int) ([]m.Basket, error) {
+func GetBasket(userID int, email string) ([]m.Basket, error) {
 	var SliceBasket []m.Basket
 
 	rows, err := d.DB.Query(`SELECT product_id, product_name, product_price FROM basket WHERE user_id=$1`, userID)
@@ -321,6 +337,8 @@ func GetBasket(userID int) ([]m.Basket, error) {
 
 	for rows.Next() {
 		var ItemFromBasket m.Basket
+		ItemFromBasket.UserID = userID
+		ItemFromBasket.Email = email
 		err := rows.Scan(&ItemFromBasket.ProductID, &ItemFromBasket.ProductName, &ItemFromBasket.ProductPrice)
 		if err != nil {
 			return []m.Basket{}, fmt.Errorf("err scan Basket:%w", err)
@@ -330,8 +348,8 @@ func GetBasket(userID int) ([]m.Basket, error) {
 	return SliceBasket, nil
 }
 
-func DeleteBasketItem(ProductID int) error {
-	res, err := d.DB.Exec("DELETE FROM basket WHERE user_id=$1", ProductID)
+func DeleteBasketItem(ProductID, UserID int) error {
+	res, err := d.DB.Exec("DELETE FROM basket WHERE id=$1 AND user_id=$2", ProductID, UserID)
 	if err != nil {
 		return fmt.Errorf("err delete from basket: %w", err)
 	}
@@ -341,35 +359,61 @@ func DeleteBasketItem(ProductID int) error {
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("no basket item found with user_id %d", ProductID)
+		return fmt.Errorf("no basket item found with product_id %d", ProductID)
 	}
 
 	return nil
 }
 
-// func GetCourse(userID int) ([]string, error) {
-// 	var CourseUrl []string
-// 	rows, err := d.DB.Query(`
-//         SELECT p.url
-//         FROM successful_purchases sp
-//         JOIN products p ON sp.product_id = p.id
-//         WHERE sp.user_id = $1`, userID)
-// 	if err != nil {
-// 		return nil, fmt.Errorf("err query rows: %w", err)
-// 	}
-// 	defer rows.Close()
+func GetCourse(userID int) ([]string, error) {
+	var courseSlice []string
+	rows, err := d.DB.Query(`
+	SELECT product_id
+	FROM successful_purchases
+	WHERE user_id=$1
+	`, userID)
 
-// 	for rows.Next() {
-// 		var url string
-// 		if err := rows.Scan(&url); err != nil {
-// 			return nil, fmt.Errorf("err scan getcourse: %w", err)
-// 		}
-// 		CourseUrl = append(CourseUrl, url)
-// 	}
+	if err != nil {
+		return nil, fmt.Errorf("err query rows: %w", err)
+	}
 
-// 	if err := rows.Err(); err != nil {
-// 		return nil, fmt.Errorf("rows iteration err: %w", err)
-// 	}
+	defer rows.Close()
 
-// 	return CourseUrl, nil
-// }
+	for rows.Next() {
+		var courseID string
+		err := rows.Scan(&courseID)
+		if err != nil {
+			return nil, fmt.Errorf("err scan course_id: %w", err)
+		}
+		courseSlice = append(courseSlice, courseID)
+	}
+
+	return courseSlice, nil
+}
+
+func PostVideo(userID, courseID int) ([]m.VideoResponse, error) {
+	var SliceVideoResponse []m.VideoResponse
+	rows, err := d.DB.Query(`
+		SELECT url, video_name
+		FROM video v
+		JOIN successful_purchases sp
+		ON sp.product_id=v.product_id
+		WHERE sp.user_id=$1 AND sp.product_id=$2 AND NOW()<sp.sub_end;
+	`, userID, courseID)
+	if err != nil {
+		return nil, fmt.Errorf("err select url, vN:%w ", err)
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var Video m.VideoResponse
+		err := rows.Scan(&Video.URL, &Video.VideoName)
+		if err != nil {
+			return nil, fmt.Errorf("err scan url, vN:%w ", err)
+		}
+		SliceVideoResponse = append(SliceVideoResponse, Video)
+	}
+
+	return SliceVideoResponse, nil
+}

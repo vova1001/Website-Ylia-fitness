@@ -1,7 +1,9 @@
 package handlerJSON
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -13,7 +15,7 @@ import (
 	m "github.com/vova1001/Website-Ylia-fitness/internal/model"
 )
 
-func GetHethJSON(ctx *gin.Context) {
+func GetHelthJSON(ctx *gin.Context) {
 	ctx.JSON(200, "Server is running!")
 }
 
@@ -42,10 +44,12 @@ func PostAuthJson(ctx *gin.Context) {
 	err := ctx.ShouldBindJSON(&User)
 	if err != nil {
 		ctx.JSON(400, gin.H{"err": "err json"})
+		return
 	}
 	token, err := h.AuthUser(User)
 	if err != nil {
 		ctx.JSON(401, gin.H{"err": err.Error()})
+		return
 	}
 	ctx.JSON(200, token)
 }
@@ -111,12 +115,12 @@ func FogotPassJSON(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-	token, err := h.FogotPass(email)
+	err = h.FogotPass(email)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
-	ctx.JSON(200, token)
+	ctx.JSON(200, "Good")
 }
 
 func ResetPasswordJSON(ctx *gin.Context) {
@@ -157,11 +161,13 @@ func AddBasketJSON(ctx *gin.Context) {
 	res, err := h.ProductAddBasket(UserIDint, IdProduct, EmailStr)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
 	}
+	log.Println("Course added to basket")
 	ctx.JSON(200, res)
 }
 
-func PurchaseJSON(ctx *gin.Context) {
+func GetPurchaseJSON(ctx *gin.Context) {
 	UserID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
@@ -189,6 +195,7 @@ func WebhookJSON(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	ctx.JSON(200, "Successfull payment!!!")
 }
 
 func GetBasketJSON(ctx *gin.Context) {
@@ -197,24 +204,37 @@ func GetBasketJSON(ctx *gin.Context) {
 		ctx.JSON(401, gin.H{"err": "User not found"})
 		return
 	}
+	Email, exists := ctx.Get("userEmail")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "Email not found"})
+		return
+	}
+	EmailStr := Email.(string)
 	UserIDint := UserID.(int)
-	SliceBasket, err := h.GetBasket(UserIDint)
+	SliceBasket, err := h.GetBasket(UserIDint, EmailStr)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
 	}
+	log.Println("Courses from basket")
 	ctx.JSON(200, SliceBasket)
 
 }
 
 func DeleteBasketJSON(ctx *gin.Context) {
-	var ProductID int
+	var ProductID m.DeleteBasketItem
 	err := ctx.ShouldBindJSON(&ProductID)
 	if err != nil {
 		ctx.JSON(400, gin.H{"err": "err json"})
 		return
 	}
-	err = h.DeleteBasketItem(ProductID)
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := UserID.(int)
+	err = h.DeleteBasketItem(ProductID.ID, UserIDint)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
@@ -222,17 +242,48 @@ func DeleteBasketJSON(ctx *gin.Context) {
 	ctx.JSON(200, "Item deleted from basket")
 }
 
-// func GetCourseJSON(ctx *gin.Context) {
-// 	userID, exists := ctx.Get("userID")
-// 	if !exists {
-// 		ctx.JSON(401, gin.H{"err": "User not found"})
-// 		return
-// 	}
-// 	UserIDint := userID.(int)
-// 	ResURL, err := h.GetCourse(UserIDint)
-// 	if err != nil {
-// 		ctx.JSON(500, gin.H{"err": err.Error()})
-// 		return
-// 	}
-// 	ctx.JSON(200, ResURL)
-// }
+func GetCourseJSON(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+	ResCourse, err := h.GetCourse(UserIDint)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	log.Println("Purchased courses")
+	ctx.JSON(200, ResCourse)
+}
+
+func PostVideoJSON(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+
+	res, err := ctx.GetRawData()
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err.Error()})
+		return
+	}
+	var msg map[string]int
+	err = json.Unmarshal(res, &msg)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err.Error()})
+		return
+	}
+	courseID := msg["course_id"]
+
+	ResVideo, err := h.PostVideo(UserIDint, courseID)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	log.Println("Video sending!)")
+	ctx.JSON(200, ResVideo)
+}

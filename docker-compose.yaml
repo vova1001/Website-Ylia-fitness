@@ -1,29 +1,35 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
+    env_file:
+      - .env
 
   pgadmin:
     image: dpage/pgadmin4
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
-      - "5050:80" 
+      - "5050:80"
     depends_on:
       - postgres
     restart: unless-stopped
+    env_file:
+      - .env
 
   backend:
-    build: 
+    build:
       context: ./backend
       dockerfile: Dockerfile
     ports:
@@ -31,13 +37,31 @@ services:
     depends_on:
       - postgres
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=myuser
-      - DB_PASSWORD=mypassword
-      - DB_NAME=mydb
-      - DB_SSLMODE=disable
+      # Database
+      - DB_HOST=${DB_HOST}
+      - DB_PORT=${DB_PORT}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_SSLMODE=${DB_SSLMODE}
+      
+      # App settings
+      - APP_PORT=${APP_PORT}
+      - GIN_MODE=${GIN_MODE}
+      - JWT_SECRET=${JWT_SECRET}
+      
+      # ЮKassa
+      - YOOKASSA_SHOP_ID=${YOOKASSA_SHOP_ID}
+      - YOOKASSA_API_KEY=${YOOKASSA_API_KEY}
+      
+      # Email (Mail.ru)
+      - EMAIL_BOT=${EMAIL_BOT}
+      - EMAIL_BOT_PASS=${EMAIL_BOT_PASS}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
     restart: unless-stopped
+    env_file:
+      - .env
 
   frontend:
     build:
@@ -60,6 +84,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-    
+
 volumes:
   postgres_data:

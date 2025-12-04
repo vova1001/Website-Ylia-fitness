@@ -25,17 +25,18 @@ func RegisterRoutes(r *gin.Engine) {
 	auth.Use(h.JWT_Middleware())
 	{
 		auth.GET("/hi", h.GetAuthJson)
-		auth.POST("/purchase", h.PurchaseJSON)
+		auth.GET("/purchase", h.GetPurchaseJSON)
 		auth.GET("/basket", h.GetBasketJSON)
 		auth.POST("/basket/add", h.AddBasketJSON)
 		auth.DELETE("/basekt/item", h.DeleteBasketJSON)
-		// auth.GET("get-course",h.)
+		auth.GET("/getCourse", h.GetCourseJSON)
+		auth.POST("/showVideo", h.PostVideoJSON)
 	}
 	r.POST("/registerUser", h.PostNewUserJson)
 	r.POST("/authUser", h.PostAuthJson)
 	r.POST("/fogotPassword", h.FogotPassJSON)
 	r.POST("/resetPassword", h.ResetPasswordJSON)
-	r.GET("/", h.GetHethJSON)
+	r.GET("/", h.GetHelthJSON)
 	r.POST("/webhook", h.WebhookJSON)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 }
