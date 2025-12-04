@@ -39,6 +39,8 @@ func DB_Conect() {
 	createTablePurchaseRequest()
 	createTablePurchaseItems()
 	createTableSuccessfulPurchases()
+	createPopulateFunction()
+
 }
 
 // сами курсы (4 шт)
@@ -147,4 +149,118 @@ func createTableBasket() {
 		log.Fatal("Error created table basket", err)
 	}
 	fmt.Println("Table basket created successefully")
+}
+
+////////////////////////////////////////////////////////////////////////////
+
+// createPopulateFunction создает SQL функцию для заполнения данных
+func createPopulateFunction() error {
+	sqlFunction := `
+CREATE OR REPLACE FUNCTION populate_fitness_courses_func()
+RETURNS VOID AS $$
+DECLARE
+    yoga_id INT;
+    strength_id INT;
+    cardio_id INT;
+    pilates_id INT;
+    video_counter INT;
+    
+    -- Названия видео для разных типов тренировок
+    yoga_videos TEXT[] := ARRAY[
+        'Введение в йогу', 'Позы для начинающих', 'Дыхательные практики',
+        'Утренний комплекс', 'Йога для гибкости', 'Релаксация и медитация',
+        'Йога для спины', 'Баланс и равновесие', 'Силовая йога',
+        'Йога для сна', 'Продвинутые асаны', 'Итоговая практика'
+    ];
+    
+    strength_videos TEXT[] := ARRAY[
+        'Основы силового тренинга', 'Тренировка ног', 'Тренировка спины',
+        'Грудные мышцы', 'Плечи и руки', 'Кор и пресс',
+        'Функциональный тренинг', 'Тренировка с гантелями', 'Тренировка с резиной',
+        'Прогрессия нагрузок', 'Восстановление', 'Итоговый комплекс'
+    ];
+    
+    cardio_videos TEXT[] := ARRAY[
+        'Кардио для начинающих', 'Интервальный тренинг', 'Танцевальное кардио',
+        'HIIT тренировка', 'Скакалка', 'Лестница и степ',
+        'Низкоударное кардио', 'Высокоинтенсивное кардио', 'Кардио для выносливости',
+        'Тренировка на улице', 'Кардио с весом тела', 'Заминка и растяжка'
+    ];
+    
+    pilates_videos TEXT[] := ARRAY[
+        'Основы пилатеса', 'Пилатес для пресса', 'Пилатес для спины',
+        'Работа с ковриком', 'Упражнения с роллом', 'Пилатес для ягодиц',
+        'Пилатес для ног', 'Пилатес для осанки', 'Продвинутый уровень',
+        'Пилатес для женщин', 'Пилатес для мужчин', 'Комплекс на все тело'
+    ];
+BEGIN
+    -- Проверяем, есть ли уже курсы (очищаем если есть)
+    DELETE FROM video;
+    DELETE FROM products;
+    
+    -- Вставляем 4 фитнес-курса по одному с получением ID
+    INSERT INTO products (product_name, product_price, currency)
+    VALUES ('Йога для начинающих', 7999.99, 'RUB')
+    RETURNING id INTO yoga_id;
+    
+    INSERT INTO products (product_name, product_price, currency)
+    VALUES ('Силовые тренировки дома', 9999.50, 'RUB')
+    RETURNING id INTO strength_id;
+    
+    INSERT INTO products (product_name, product_price, currency)
+    VALUES ('Кардио тренировки', 6999.00, 'RUB')
+    RETURNING id INTO cardio_id;
+    
+    INSERT INTO products (product_name, product_price, currency)
+    VALUES ('Пилатес для осанки', 8999.75, 'RUB')
+    RETURNING id INTO pilates_id;
+    
+    -- Добавляем по 12 видео для каждого курса
+    FOR video_counter IN 1..12 LOOP
+        -- Видео для йоги
+        INSERT INTO video (product_id, url, video_name)
+        VALUES (
+            yoga_id,
+            'https://fitness-academy.com/videos/yoga/video-' || video_counter,
+            yoga_videos[video_counter]
+        );
+        
+        -- Видео для силовых тренировок
+        INSERT INTO video (product_id, url, video_name)
+        VALUES (
+            strength_id,
+            'https://fitness-academy.com/videos/strength/video-' || video_counter,
+            strength_videos[video_counter]
+        );
+        
+        -- Видео для кардио
+        INSERT INTO video (product_id, url, video_name)
+        VALUES (
+            cardio_id,
+            'https://fitness-academy.com/videos/cardio/video-' || video_counter,
+            cardio_videos[video_counter]
+        );
+        
+        -- Видео для пилатеса
+        INSERT INTO video (product_id, url, video_name)
+        VALUES (
+            pilates_id,
+            'https://fitness-academy.com/videos/pilates/video-' || video_counter,
+            pilates_videos[video_counter]
+        );
+    END LOOP;
+    
+    RAISE NOTICE '✅ Фитнес-курсы успешно созданы!';
+    RAISE NOTICE '   Создано: 4 курса и 48 видео уроков';
+END;
+$$ LANGUAGE plpgsql;
+`
+
+	_, err := DB.Exec(sqlFunction)
+	if err != nil {
+		return fmt.Errorf("ошибка выполнения SQL: %w", err)
+	}
+
+	log.Println("✅ SQL функция populate_fitness_courses_func создана")
+	return nil
 }
