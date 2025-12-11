@@ -39,6 +39,7 @@ func DB_Conect() {
 	createTablePurchaseRequest()
 	createTablePurchaseItems()
 	createTableSuccessfulPurchases()
+	createTablePurchaseExtension()
 	createPopulateFunction()
 
 }
@@ -151,6 +152,22 @@ func createTableBasket() {
 	fmt.Println("Table basket created successefully")
 }
 
+func createTablePurchaseExtension() {
+	createTable := `
+		CREATE TABLE IF NOT EXISTS purchase_extension(
+			id SERIAL PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			product_id INTEGER NOT NULL,
+			payment_id TEXT
+		);
+	`
+	_, err := DB.Exec(createTable)
+	if err != nil {
+		log.Fatal("Error created table basket", err)
+	}
+	fmt.Println("Table basket created successefully")
+}
+
 ////////////////////////////////////////////////////////////////////////////
 
 // createPopulateFunction создает SQL функцию для заполнения данных
@@ -200,19 +217,19 @@ BEGIN
     
     -- Вставляем 4 фитнес-курса по одному с получением ID
     INSERT INTO products (product_name, product_price, currency)
-    VALUES ('Йога для начинающих', 7999.99, 'RUB')
+    VALUES ('Йога для начинающих', 1, 'RUB')
     RETURNING id INTO yoga_id;
     
     INSERT INTO products (product_name, product_price, currency)
-    VALUES ('Силовые тренировки дома', 9999.50, 'RUB')
+    VALUES ('Силовые тренировки дома', 1, 'RUB')
     RETURNING id INTO strength_id;
     
     INSERT INTO products (product_name, product_price, currency)
-    VALUES ('Кардио тренировки', 6999.00, 'RUB')
+    VALUES ('Кардио тренировки', 1, 'RUB')
     RETURNING id INTO cardio_id;
     
     INSERT INTO products (product_name, product_price, currency)
-    VALUES ('Пилатес для осанки', 8999.75, 'RUB')
+    VALUES ('Пилатес для осанки', 1, 'RUB')
     RETURNING id INTO pilates_id;
     
     -- Добавляем по 12 видео для каждого курса
