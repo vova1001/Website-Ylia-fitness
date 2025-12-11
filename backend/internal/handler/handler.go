@@ -278,7 +278,7 @@ func PurchesRequest(UserId int) (string, error) {
 
 func PurchaseExtansion(UserID, CourseID int) (string, error) {
 	var ProductPrice float64
-	err := d.DB.QueryRow("SELECT product_price FROM products WHERE id=$1", CourseID).Scan(&ProductPrice)
+	err := d.DB.QueryRow("SELECT product_price FROM successful_purchases WHERE id=$1 AND user_id=$2", CourseID, UserID).Scan(&ProductPrice)
 	if err != nil {
 		return "", fmt.Errorf("err scan from products for purchase_extension %w", err)
 	}
