@@ -275,6 +275,35 @@ func PurchesRequest(UserId int) (string, error) {
 
 	return resp.Confirmation.ConfirmationURL, nil
 }
+
+func PurchaseExtansion(UserID, CourseID int) (string, error) {
+	var ProductPrice float64
+	err := d.DB.QueryRow("SELECT product_price FROM products WHERE id=$1", CourseID).Scan(&ProductPrice)
+	if err != nil {
+		return "", fmt.Errorf("err scan from products for purchase_extension %w", err)
+	}
+
+	yc := o.NewYookassaClient(
+		o.GetEnv("YOOKASSA_SHOP_ID", ""),
+		o.GetEnv("YOOKASSA_API_KEY", ""),
+	)
+	resp, err := o.CreatePayment(yc, ProductPrice, "Продление курса")
+	if err != nil {
+		return "", fmt.Errorf("err create payment: %w", err)
+	}
+	PaymentID := resp.ID
+
+	_, err = d.DB.Exec(`
+	INSERT INTO purchase_extension
+	(user_id, product_id, payment_id)
+	VALUES($1,$2,$3)`, UserID, CourseID, PaymentID)
+	if err != nil {
+		return "", fmt.Errorf("err insert purchase_extension: %w", err)
+	}
+
+	return resp.Confirmation.ConfirmationURL, nil
+}
+
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.PurchasePaid
 	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {
@@ -282,13 +311,12 @@ func WebhookY(Webook m.YookassaWebhook) error {
 	} else {
 		return fmt.Errorf("payment failed")
 	}
-
 	err := d.DB.QueryRow(`
     SELECT user_id, email, payment_id, id
     FROM purchase_request 
     WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
 	if err != nil {
-		return fmt.Errorf("err scan from purchase_request")
+		return fmt.Errorf("err scan from purchase_request %w", err)
 	}
 	PurchasePaid.SubStart = time.Now()
 	PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)

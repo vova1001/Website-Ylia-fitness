@@ -183,6 +183,34 @@ func GetPurchaseJSON(ctx *gin.Context) {
 	ctx.JSON(200, URL_payment)
 }
 
+func PostPurchaseExtansion(ctx *gin.Context) {
+	UserID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := UserID.(int)
+	res, err := ctx.GetRawData()
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err})
+		return
+	}
+	var msg map[string]int
+	err = json.Unmarshal(res, &msg)
+	if err != nil {
+		ctx.JSON(400, gin.H{"err": err})
+		return
+	}
+	CourseID := msg["course_id"]
+	resUrl, err := h.PurchaseExtansion(UserIDint, CourseID)
+	if err != nil {
+		ctx.JSON(500, gin.H{"err": err.Error()})
+		return
+	}
+	ctx.JSON(200, resUrl)
+
+}
+
 func WebhookJSON(ctx *gin.Context) {
 	var Webhook m.YookassaWebhook
 	err := ctx.ShouldBindJSON(&Webhook)
