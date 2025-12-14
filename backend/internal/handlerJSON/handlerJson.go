@@ -201,7 +201,12 @@ func PostPurchaseExtension(ctx *gin.Context) {
 		ctx.JSON(400, gin.H{"err": err})
 		return
 	}
-	CourseID := msg["course_id"]
+
+	CourseID, exists := msg["course_id"]
+	if !exists {
+		ctx.JSON(400, gin.H{"err": "course_id is required in JSON"})
+		return
+	}
 	resUrl, err := h.PurchaseExtension(UserIDint, CourseID)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
