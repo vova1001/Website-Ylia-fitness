@@ -97,8 +97,9 @@ type YookassaPaymentRequest struct {
 		Value    string `json:"value"`
 		Currency string `json:"currency"`
 	} `json:"amount"`
-	Capture      bool   `json:"capture"`
-	Description  string `json:"description"`
+	Capture      bool              `json:"capture"`
+	Description  string            `json:"description"`
+	Metadata     map[string]string `json:"metadata,omitempty"`
 	Confirmation struct {
 		Type      string `json:"type"`
 		ReturnURL string `json:"return_url"`
@@ -116,8 +117,9 @@ type YookassaPaymentResponse struct {
 type YookassaWebhook struct {
 	Event  string `json:"event"`
 	Object struct {
-		ID     string `json:"id"`
-		Status string `json:"status"`
-		Paid   bool   `json:"paid"`
+		ID       string            `json:"id"`
+		Status   string            `json:"status"`
+		Paid     bool              `json:"paid"`
+		Metadata map[string]string `json:"metadata"`
 	} `json:"object"`
 }

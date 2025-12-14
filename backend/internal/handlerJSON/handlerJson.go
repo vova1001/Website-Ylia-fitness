@@ -175,7 +175,7 @@ func GetPurchaseJSON(ctx *gin.Context) {
 	}
 
 	UserIDint := UserID.(int)
-	URL_payment, err := h.PurchesRequest(UserIDint)
+	URL_payment, err := h.PurchaseRequest(UserIDint)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
@@ -183,7 +183,7 @@ func GetPurchaseJSON(ctx *gin.Context) {
 	ctx.JSON(200, URL_payment)
 }
 
-func PostPurchaseExtansion(ctx *gin.Context) {
+func PostPurchaseExtension(ctx *gin.Context) {
 	UserID, exists := ctx.Get("userID")
 	if !exists {
 		ctx.JSON(401, gin.H{"err": "User not found"})
@@ -202,7 +202,7 @@ func PostPurchaseExtansion(ctx *gin.Context) {
 		return
 	}
 	CourseID := msg["course_id"]
-	resUrl, err := h.PurchaseExtansion(UserIDint, CourseID)
+	resUrl, err := h.PurchaseExtension(UserIDint, CourseID)
 	if err != nil {
 		ctx.JSON(500, gin.H{"err": err.Error()})
 		return
