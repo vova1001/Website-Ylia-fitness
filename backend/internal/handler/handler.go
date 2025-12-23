@@ -381,7 +381,13 @@ func WebhookY(Webook m.YookassaWebhook) error {
 		if err != nil {
 			return fmt.Errorf("err scan from purchase_extension %w", err)
 		}
-		_, err = d.DB.Exec("UPDATE successful_purchases SET sub_end = sub_end + INTERVAL '30 days' WHERE user_id=$1 AND product_id=$2", UserIdForExtension, ProductIdForExtension)
+		_, err = d.DB.Exec(`"UPDATE successful_purchases
+				SET sub_end = 
+				CASE
+					WHEN sub_end > NOW() THEN sub_end + INTERVAL '30 days'
+					ELSE NOW() + INTERVAL '30 days'
+				END
+				WHERE user_id = $1 AND product_id = $2;"`, UserIdForExtension, ProductIdForExtension)
 		if err != nil {
 			return fmt.Errorf("err update successful_purchase for new sub_end + 30 days %w", err)
 		}
