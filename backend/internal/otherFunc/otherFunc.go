@@ -107,7 +107,7 @@ func NewYookassaClient(shopID, apiKey string) *m.YookassaClient {
 	}
 }
 
-func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m.YookassaPaymentResponse, error) {
+func CreatePayment(yc *m.YookassaClient, amount float64, description string, metadata map[string]string) (*m.YookassaPaymentResponse, error) {
 	req := &m.YookassaPaymentRequest{
 		Amount: struct {
 			Value    string `json:"value"`
@@ -118,6 +118,7 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string) (*m
 		},
 		Capture:     true,
 		Description: description,
+		Metadata:    metadata,
 		Confirmation: struct {
 			Type      string `json:"type"`
 			ReturnURL string `json:"return_url"`

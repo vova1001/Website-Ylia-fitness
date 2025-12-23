@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -201,7 +202,7 @@ func ProductAddBasket(UserID, ProductID int, Email string) (string, error) {
 	return "Successfully", nil
 }
 
-func PurchesRequest(UserId int) (string, error) {
+func PurchaseRequest(UserId int) (string, error) {
 	var PR m.PurchaseRequest
 	var items []m.PurchaseItem
 
@@ -233,13 +234,17 @@ func PurchesRequest(UserId int) (string, error) {
 		NamesItemsFromYK += fmt.Sprintf(", %s", item.ProductName)
 	}
 
-	// Клиент Юкасса напрямую
 	yc := o.NewYookassaClient(
 		o.GetEnv("YOOKASSA_SHOP_ID", ""),
 		o.GetEnv("YOOKASSA_API_KEY", ""),
 	)
 
-	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK)
+	metadataPurch := map[string]string{
+		"type":    "purchase",
+		"user_id": strconv.Itoa(UserId),
+	}
+
+	resp, err := o.CreatePayment(yc, PR.TotalAmount, NamesItemsFromYK, metadataPurch)
 	if err != nil {
 		return "", fmt.Errorf("err create payment: %w", err)
 	}
@@ -276,7 +281,7 @@ func PurchesRequest(UserId int) (string, error) {
 	return resp.Confirmation.ConfirmationURL, nil
 }
 
-func PurchaseExtansion(UserID, CourseID int) (string, error) {
+func PurchaseExtension(UserID, CourseID int) (string, error) {
 	var ProductPrice float64
 	err := d.DB.QueryRow("SELECT product_price FROM successful_purchases WHERE id=$1 AND user_id=$2", CourseID, UserID).Scan(&ProductPrice)
 	if err != nil {
@@ -287,7 +292,13 @@ func PurchaseExtansion(UserID, CourseID int) (string, error) {
 		o.GetEnv("YOOKASSA_SHOP_ID", ""),
 		o.GetEnv("YOOKASSA_API_KEY", ""),
 	)
-	resp, err := o.CreatePayment(yc, ProductPrice, "Продление курса")
+
+	metadataExtension := map[string]string{
+		"type":    "extension",
+		"user_id": strconv.Itoa(UserID),
+	}
+
+	resp, err := o.CreatePayment(yc, ProductPrice, "Продление курса", metadataExtension)
 	if err != nil {
 		return "", fmt.Errorf("err create payment: %w", err)
 	}
@@ -306,51 +317,83 @@ func PurchaseExtansion(UserID, CourseID int) (string, error) {
 
 func WebhookY(Webook m.YookassaWebhook) error {
 	var PurchasePaid m.PurchasePaid
-	if Webook.Event == "payment.succeeded" && Webook.Object.Status == "succeeded" && Webook.Object.Paid {
-		PurchasePaid.PaymentID = Webook.Object.ID
-	} else {
+	if Webook.Event != "payment.succeeded" || Webook.Object.Status != "succeeded" || !Webook.Object.Paid {
 		return fmt.Errorf("payment failed")
 	}
-	err := d.DB.QueryRow(`
-    SELECT user_id, email, payment_id, id
-    FROM purchase_request 
-    WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
-	if err != nil {
-		return fmt.Errorf("err scan from purchase_request %w", err)
-	}
-	PurchasePaid.SubStart = time.Now()
-	PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
 
-	rows, _ := d.DB.Query(`
-		SELECT product_id, product_name, product_price 
-		FROM purchase_item
-		WHERE purchase_request_id=$1
-	`, PurchasePaid.ID)
-
-	defer rows.Close()
-
-	var PurchasePaidItems []m.PurchaseItem
-	for rows.Next() {
-		var PurchasePaidItem m.PurchaseItem
-		err := rows.Scan(&PurchasePaidItem.ProductID, &PurchasePaidItem.ProductName, &PurchasePaidItem.ProductPrice)
-		if err != nil {
-			return fmt.Errorf("Err scan PurchPaidItem:%w", err)
-		}
-		PurchasePaidItems = append(PurchasePaidItems, PurchasePaidItem)
+	metadata := Webook.Object.Metadata
+	paymentType, ok := metadata["type"]
+	if !ok {
+		return fmt.Errorf("metadata.type missing")
 	}
 
-	for _, ItemPaid := range PurchasePaidItems {
-		_, err := d.DB.Exec(`
-			INSERT INTO successful_purchases
-			(user_id, email, payment_id, sub_start, sub_end, product_name, product_price, product_id)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-		`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.PaymentID, PurchasePaid.SubStart, PurchasePaid.SubEnd, ItemPaid.ProductName, ItemPaid.ProductPrice, ItemPaid.ProductID)
+	switch paymentType {
+
+	case "purchase":
+		PurchasePaid.PaymentID = Webook.Object.ID
+
+		err := d.DB.QueryRow(`
+			SELECT user_id, email, payment_id, id
+			FROM purchase_request 
+			WHERE payment_id=$1`, PurchasePaid.PaymentID).Scan(&PurchasePaid.UserID, &PurchasePaid.Email, &PurchasePaid.PaymentID, &PurchasePaid.ID)
 		if err != nil {
-			return fmt.Errorf("err insert successful_purchases: %w", err)
+			return fmt.Errorf("err scan from purchase_request %w", err)
 		}
+
+		PurchasePaid.SubStart = time.Now()
+		PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
+
+		rows, _ := d.DB.Query(`
+				SELECT product_id, product_name, product_price 
+				FROM purchase_item
+				WHERE purchase_request_id=$1
+			`, PurchasePaid.ID)
+
+		defer rows.Close()
+
+		var PurchasePaidItems []m.PurchaseItem
+		for rows.Next() {
+			var PurchasePaidItem m.PurchaseItem
+			err := rows.Scan(&PurchasePaidItem.ProductID, &PurchasePaidItem.ProductName, &PurchasePaidItem.ProductPrice)
+			if err != nil {
+				return fmt.Errorf("Err scan PurchPaidItem:%w", err)
+			}
+			PurchasePaidItems = append(PurchasePaidItems, PurchasePaidItem)
+		}
+
+		for _, ItemPaid := range PurchasePaidItems {
+			_, err := d.DB.Exec(`
+					INSERT INTO successful_purchases
+					(user_id, email, payment_id, sub_start, sub_end, product_name, product_price, product_id)
+					VALUES($1,$2,$3,$4,$5,$6,$7,$8)
+				`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.PaymentID, PurchasePaid.SubStart, PurchasePaid.SubEnd, ItemPaid.ProductName, ItemPaid.ProductPrice, ItemPaid.ProductID)
+			if err != nil {
+				return fmt.Errorf("err insert successful_purchases: %w", err)
+			}
+		}
+		return nil
+
+	case "extension":
+		var ProductIdForExtension int
+		var UserIdForExtension int
+		ExtensionPaymentId := Webook.Object.ID
+		err := d.DB.QueryRow("SELECT product_id, user_id FROM purchase_extension WHERE payment_id=$1", ExtensionPaymentId).Scan(&ProductIdForExtension, &UserIdForExtension)
+		if err != nil {
+			return fmt.Errorf("err scan from purchase_extension %w", err)
+		}
+		_, err = d.DB.Exec(`"UPDATE successful_purchases
+				SET sub_end = 
+				CASE
+					WHEN sub_end > NOW() THEN sub_end + INTERVAL '30 days'
+					ELSE NOW() + INTERVAL '30 days'
+				END
+				WHERE user_id = $1 AND product_id = $2;"`, UserIdForExtension, ProductIdForExtension)
+		if err != nil {
+			return fmt.Errorf("err update successful_purchase for new sub_end + 30 days %w", err)
+		}
+		return nil
 	}
 	return nil
-
 }
 
 func GetBasket(userID int, email string) ([]m.Basket, error) {
