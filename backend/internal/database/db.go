@@ -41,7 +41,7 @@ func DB_Conect() {
 	createTableSuccessfulPurchases()
 	createTablePurchaseExtension()
 	createPopulateFunction()
-
+	populateInitialData() // ← НОВАЯ ФУНКЦИЯ!
 }
 
 // сами курсы (4 шт)
@@ -280,4 +280,32 @@ $$ LANGUAGE plpgsql;
 
 	log.Println("✅ SQL функция populate_fitness_courses_func создана")
 	return nil
+}
+
+// populateInitialData заполняет таблицы начальными данными
+func populateInitialData() {
+	// Проверяем, пустая ли таблица products
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM products").Scan(&count)
+	if err != nil {
+		log.Printf("Ошибка при проверке данных: %v", err)
+		return
+	}
+
+	// Если таблица пустая - заполняем данными
+	if count == 0 {
+		log.Println("Заполняем таблицы тестовыми данными...")
+
+		// Вызываем функцию заполнения
+		_, err := DB.Exec("SELECT populate_fitness_courses_func();")
+		if err != nil {
+			log.Printf("Ошибка заполнения данных: %v", err)
+			return
+		}
+
+		log.Println("✅ Таблицы успешно заполнены тестовыми данными")
+		log.Println("   Создано: 4 курса и 48 видео уроков")
+	} else {
+		log.Printf("✅ В таблице уже есть данные: %d записей", count)
+	}
 }

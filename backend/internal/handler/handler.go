@@ -420,7 +420,7 @@ func GetBasket(userID int, email string) ([]m.Basket, error) {
 }
 
 func DeleteBasketItem(ProductID, UserID int) error {
-	res, err := d.DB.Exec("DELETE FROM basket WHERE id=$1 AND user_id=$2", ProductID, UserID)
+	res, err := d.DB.Exec("DELETE FROM basket WHERE product_id=$1 AND user_id=$2", ProductID, UserID)
 	if err != nil {
 		return fmt.Errorf("err delete from basket: %w", err)
 	}
