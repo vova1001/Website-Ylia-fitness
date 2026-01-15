@@ -436,10 +436,10 @@ func DeleteBasketItem(ProductID, UserID int) error {
 	return nil
 }
 
-func GetCourse(userID int) ([]string, error) {
-	var courseSlice []string
+func GetCourse(userID int) ([]m.SPprodANDtimeEnd, error) {
+	var courseSlice []m.SPprodANDtimeEnd
 	rows, err := d.DB.Query(`
-	SELECT product_id
+	SELECT product_id, sub_end
 	FROM successful_purchases
 	WHERE user_id=$1
 	`, userID)
@@ -451,12 +451,16 @@ func GetCourse(userID int) ([]string, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var courseID string
-		err := rows.Scan(&courseID)
+		var RespSP_Time m.SPprodANDtimeEnd
+		var timeEnd time.Time
+		err := rows.Scan(&RespSP_Time.ProductID, timeEnd)
 		if err != nil {
 			return nil, fmt.Errorf("err scan course_id: %w", err)
 		}
-		courseSlice = append(courseSlice, courseID)
+		difference := timeEnd.Sub(time.Now())
+		LifeTimeCourse := o.DifferenceDead(difference)
+		RespSP_Time.DifferenceTime = LifeTimeCourse
+		courseSlice = append(courseSlice, RespSP_Time)
 	}
 
 	return courseSlice, nil
