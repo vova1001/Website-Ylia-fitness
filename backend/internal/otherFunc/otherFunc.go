@@ -169,3 +169,11 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string, met
 
 	return &paymentResp, nil
 }
+
+func DifferenceDead(d time.Duration) m.ResponseDuration {
+	if d < 0 {
+		return m.ResponseDuration{Days: 0, Hours: 0, Text: "Course is Dead"}
+	}
+	AllHours := int(d.Hours())
+	return m.ResponseDuration{Days: AllHours / 24, Hours: AllHours % 24, Text: "There is time"}
+}

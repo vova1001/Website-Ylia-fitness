@@ -76,6 +76,17 @@ type Basket struct {
 	ProductPrice float64
 }
 
+type SPprodANDtimeEnd struct {
+	ProductID      int
+	DifferenceTime ResponseDuration
+}
+
+type ResponseDuration struct {
+	Days  int
+	Hours int
+	Text  string
+}
+
 type VideoResponse struct {
 	URL       string
 	VideoName string
