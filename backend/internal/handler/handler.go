@@ -453,7 +453,7 @@ func GetCourse(userID int) ([]m.SPprodANDtimeEnd, error) {
 	for rows.Next() {
 		var RespSP_Time m.SPprodANDtimeEnd
 		var timeEnd time.Time
-		err := rows.Scan(&RespSP_Time.ProductID, timeEnd)
+		err := rows.Scan(&RespSP_Time.ProductID, &timeEnd)
 		if err != nil {
 			return nil, fmt.Errorf("err scan course_id: %w", err)
 		}
