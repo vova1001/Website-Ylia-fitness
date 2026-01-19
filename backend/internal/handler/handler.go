@@ -283,7 +283,7 @@ func PurchaseRequest(UserId int) (string, error) {
 
 func PurchaseExtension(UserID, CourseID int) (string, error) {
 	var ProductPrice float64
-	err := d.DB.QueryRow("SELECT product_price FROM successful_purchases WHERE id=$1 AND user_id=$2", CourseID, UserID).Scan(&ProductPrice)
+	err := d.DB.QueryRow("SELECT product_price FROM successful_purchases WHERE product_id=$1 AND user_id=$2", CourseID, UserID).Scan(&ProductPrice)
 	if err != nil {
 		return "", fmt.Errorf("err scan from products for purchase_extension %w", err)
 	}
@@ -381,13 +381,13 @@ func WebhookY(Webook m.YookassaWebhook) error {
 		if err != nil {
 			return fmt.Errorf("err scan from purchase_extension %w", err)
 		}
-		_, err = d.DB.Exec(`"UPDATE successful_purchases
+		_, err = d.DB.Exec(`UPDATE successful_purchases
 				SET sub_end = 
 				CASE
 					WHEN sub_end > NOW() THEN sub_end + INTERVAL '30 days'
 					ELSE NOW() + INTERVAL '30 days'
 				END
-				WHERE user_id = $1 AND product_id = $2;"`, UserIdForExtension, ProductIdForExtension)
+				WHERE user_id = $1 AND product_id = $2`, UserIdForExtension, ProductIdForExtension)
 		if err != nil {
 			return fmt.Errorf("err update successful_purchase for new sub_end + 30 days %w", err)
 		}
