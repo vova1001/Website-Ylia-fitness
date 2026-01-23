@@ -35,23 +35,51 @@ func GeneratorToken(n int) (string, error) {
 }
 
 func SendResetEmail(toEmail, resetLink string) error {
-	from := os.Getenv("EMAIL_BOT")
-	pass := os.Getenv("EMAIL_BOT_PASS")
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
+	emailBotDefault := os.Getenv("EMAIL_BOT")
+	emailPassDefault := os.Getenv("EMAIL_BOT_PASS")
 
-	log.Println("[EMAIL] Step 1: starting function")
+	emailBotYandex := os.Getenv("EMAIL_BOT_YANDEX")
+	emailPassYandex := os.Getenv("EMAIL_PASS_YANDEX")
 
+	smtpHostDefault := os.Getenv("SMTP_HOST")
+	smtpPortDefault := os.Getenv("SMTP_PORT")
+
+	var from, pass, smtpHost, smtpPort string
+
+	log.Println("[EMAIL] Step 1: checking recipient domain")
+
+	// Выбираем настройки в зависимости от домена получателя
 	switch {
-	case strings.HasSuffix(toEmail, "@mail.ru"):
-		smtpHost = "smtp.mail.ru"
 	case strings.HasSuffix(toEmail, "@yandex.ru"):
+		// Для Яндекс - используем специальные настройки
 		smtpHost = "smtp.yandex.ru"
+		smtpPort = "587" // Порт 587 для Яндекс (с STARTTLS)
+		from = emailBotYandex
+		pass = emailPassYandex
+		log.Println("[EMAIL] Using YANDEX credentials for recipient:", toEmail)
+
+	case strings.HasSuffix(toEmail, "@mail.ru"):
+		// Для Mail.ru
+		smtpHost = "smtp.mail.ru"
+		smtpPort = "587"
+		from = emailBotDefault  // Используем основной отправитель
+		pass = emailPassDefault // Используем основной пароль
+
 	case strings.HasSuffix(toEmail, "@rambler.ru"):
+		// Для Rambler
 		smtpHost = "smtp.rambler.ru"
+		smtpPort = "587"
+		from = emailBotDefault // Или можно добавить отдельные настройки для Rambler
+		pass = emailPassDefault
+
+	default:
+		smtpHost = smtpHostDefault
+		smtpPort = smtpPortDefault
+		from = emailBotDefault
+		pass = emailPassDefault
 	}
 
-	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost)
+	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost, "from =", from)
 
 	htmlBody := fmt.Sprintf(`
     <html>
