@@ -143,7 +143,7 @@ func FogotPass(email m.FogotPass) error {
 		return fmt.Errorf("error adding token info: %w", err)
 	}
 
-	resetLink := fmt.Sprintf("https://juliiafitness.ru//?token=%s", token)
+	resetLink := fmt.Sprintf("https://juliiafitness.ru/?token=%s", token)
 
 	err = o.SendResetEmail(email.Email, resetLink)
 	if err != nil {
