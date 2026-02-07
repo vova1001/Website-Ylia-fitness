@@ -320,3 +320,13 @@ func PostVideoJSON(ctx *gin.Context) {
 	log.Println("Video sending!)")
 	ctx.JSON(200, ResVideo)
 }
+
+func GetLifeTimeJSON(ctx *gin.Context){
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.JSON(401, gin.H{"err": "User not found"})
+		return
+	}
+	UserIDint := userID.(int)
+	SliceTimeLife:=
+}

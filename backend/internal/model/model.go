@@ -92,6 +92,11 @@ type VideoResponse struct {
 	VideoName string
 }
 
+type DurationnormalFormat struct {
+	Days  string
+	Hours string
+}
+
 type DeleteBasketItem struct {
 	ID int `json:"delete_item_id"`
 }

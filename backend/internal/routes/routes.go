@@ -24,6 +24,7 @@ func RegisterRoutes(r *gin.Engine) {
 	auth := r.Group("/auth")
 	auth.Use(h.JWT_Middleware())
 	{
+		auth.GET("/lifeTime")
 		auth.GET("/hi", h.GetAuthJson)
 		auth.GET("/purchase", h.GetPurchaseJSON)
 		auth.POST("/purchase/extension", h.PostPurchaseExtension)

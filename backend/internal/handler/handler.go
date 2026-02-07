@@ -403,7 +403,6 @@ func GetBasket(userID int, email string) ([]m.Basket, error) {
 	if err != nil {
 		return []m.Basket{}, fmt.Errorf("query basket error: %w", err)
 	}
-
 	defer rows.Close()
 
 	for rows.Next() {
@@ -462,7 +461,6 @@ func GetCourse(userID int) ([]m.SPprodANDtimeEnd, error) {
 		RespSP_Time.DifferenceTime = LifeTimeCourse
 		courseSlice = append(courseSlice, RespSP_Time)
 	}
-
 	return courseSlice, nil
 }
 
@@ -489,6 +487,30 @@ func PostVideo(userID, courseID int) ([]m.VideoResponse, error) {
 		}
 		SliceVideoResponse = append(SliceVideoResponse, Video)
 	}
-
 	return SliceVideoResponse, nil
+}
+
+func LifeTime(UserID int) (map[int]interface{}, error) {
+	resTimeLife := make(map[int]interface{})
+	var productID int
+	var TimeEnd time.Time
+	rows, err := d.DB.Query("SELECT product_id, sub_end FROM successful_purchases WHERE user_id=$1", UserID)
+	if err != nil {
+		return nil, fmt.Errorf("err query rows: %w", err)
+	}
+
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&productID, &TimeEnd)
+		if err != nil {
+			return nil, fmt.Errorf("err scan product_id and sub_end: %w", err)
+		}
+		TimeLife := time.Until(TimeEnd)
+		if TimeLife <= 0 {
+			resTimeLife[productID] = "product is dead"
+			continue
+		}
+
+	}
+	return resTimeLife, nil
 }
