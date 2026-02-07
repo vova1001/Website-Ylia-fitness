@@ -35,23 +35,87 @@ func GeneratorToken(n int) (string, error) {
 }
 
 func SendResetEmail(toEmail, resetLink string) error {
-	from := os.Getenv("EMAIL_BOT")
-	pass := os.Getenv("EMAIL_BOT_PASS")
-	smtpHost := os.Getenv("SMTP_HOST")
-	smtpPort := os.Getenv("SMTP_PORT")
+	// Загрузка переменных окружения
+	emailBotDefault := os.Getenv("EMAIL_BOT")
+	emailPassDefault := os.Getenv("EMAIL_BOT_PASS")
+	emailBotYandex := os.Getenv("EMAIL_BOT_YANDEX")
+	emailPassYandex := os.Getenv("EMAIL_PASS_YANDEX")
+	smtpHostDefault := os.Getenv("SMTP_HOST")
+	smtpPortDefault := os.Getenv("SMTP_PORT")
 
-	log.Println("[EMAIL] Step 1: starting function")
+	// КРИТИЧЕСКАЯ ОТЛАДКА: что реально загрузилось
+	log.Println("========== EMAIL DEBUG START ==========")
+	log.Printf("[DEBUG] Recipient email: %s", toEmail)
+	log.Printf("[DEBUG] Loaded env variables:")
+	log.Printf("[DEBUG]   EMAIL_BOT: '%s' (len pass: %d)",
+		emailBotDefault, len(emailPassDefault))
+	log.Printf("[DEBUG]   EMAIL_BOT_YANDEX: '%s'", emailBotYandex)
+	log.Printf("[DEBUG]   EMAIL_PASS_YANDEX exists: %v (length: %d)",
+		emailPassYandex != "", len(emailPassYandex))
+	if emailPassYandex != "" {
+		// Показываем только первые 2 символа пароля для безопасности
+		log.Printf("[DEBUG]   EMAIL_PASS_YANDEX starts with: '%s...'",
+			emailPassYandex[:min(2, len(emailPassYandex))])
+	}
+	log.Printf("[DEBUG]   SMTP_HOST: '%s'", smtpHostDefault)
+	log.Printf("[DEBUG]   SMTP_PORT: '%s'", smtpPortDefault)
 
+	var from, pass, smtpHost, smtpPort string
+
+	log.Println("[EMAIL] Step 1: checking recipient domain")
+
+	// Выбираем настройки в зависимости от домена получателя
 	switch {
-	case strings.HasSuffix(toEmail, "@mail.ru"):
-		smtpHost = "smtp.mail.ru"
 	case strings.HasSuffix(toEmail, "@yandex.ru"):
+		// Для Яндекс - используем специальные настройки
 		smtpHost = "smtp.yandex.ru"
+		smtpPort = "587" // Порт 587 для Яндекс (с STARTTLS)
+		from = emailBotYandex
+		pass = emailPassYandex
+
+		log.Println("[EMAIL] Using YANDEX credentials for recipient:", toEmail)
+		log.Printf("[DEBUG YANDEX] Using: host=%s, port=%s", smtpHost, smtpPort)
+		log.Printf("[DEBUG YANDEX] From address: '%s'", from)
+		log.Printf("[DEBUG YANDEX] Password provided: %v (len: %d)",
+			pass != "", len(pass))
+
+		// Проверка обязательных полей
+		if from == "" {
+			log.Println("[ERROR] Yandex from email is EMPTY!")
+			return fmt.Errorf("Yandex sender email not configured")
+		}
+		if pass == "" {
+			log.Println("[ERROR] Yandex password is EMPTY!")
+			return fmt.Errorf("Yandex password not configured")
+		}
+
+	case strings.HasSuffix(toEmail, "@mail.ru"):
+		// Для Mail.ru
+		smtpHost = "smtp.mail.ru"
+		smtpPort = "587"
+		from = emailBotDefault
+		pass = emailPassDefault
+		log.Println("[EMAIL] Using MAIL.RU credentials")
+
 	case strings.HasSuffix(toEmail, "@rambler.ru"):
+		// Для Rambler
 		smtpHost = "smtp.rambler.ru"
+		smtpPort = "587"
+		from = emailBotDefault
+		pass = emailPassDefault
+		log.Println("[EMAIL] Using RAMBLER credentials")
+
+	default:
+		smtpHost = smtpHostDefault
+		smtpPort = smtpPortDefault
+		from = emailBotDefault
+		pass = emailPassDefault
+		log.Println("[EMAIL] Using DEFAULT credentials")
 	}
 
-	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost)
+	log.Println("[EMAIL] Step 2: smtpHost =", smtpHost, "from =", from)
+	log.Printf("[DEBUG FINAL] Using: host=%s, port=%s, from=%s, pass_len=%d",
+		smtpHost, smtpPort, from, len(pass))
 
 	htmlBody := fmt.Sprintf(`
     <html>
@@ -79,14 +143,34 @@ func SendResetEmail(toEmail, resetLink string) error {
 		htmlBody
 
 	log.Println("[EMAIL] Step 3: calling SendMail...")
+	log.Printf("[DEBUG] SMTP server: %s:%s", smtpHost, smtpPort)
 
-	return smtp.SendMail(
+	// Временная отладка: логируем всё перед отправкой
+	log.Println("========== EMAIL DEBUG END ==========")
+
+	err := smtp.SendMail(
 		smtpHost+":"+smtpPort,
 		smtp.PlainAuth("", from, pass, smtpHost),
 		from,
 		[]string{toEmail},
 		[]byte(msg),
 	)
+
+	if err != nil {
+		log.Printf("[EMAIL ERROR] SendMail failed: %v", err)
+	} else {
+		log.Println("[EMAIL SUCCESS] Email sent successfully")
+	}
+
+	return err
+}
+
+// Вспомогательная функция
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func GetEnv(key, defaultValue string) string {
@@ -124,7 +208,7 @@ func CreatePayment(yc *m.YookassaClient, amount float64, description string, met
 			ReturnURL string `json:"return_url"`
 		}{
 			Type:      "redirect",
-			ReturnURL: "https://website-ylia-fitness-frontend.onrender.com/",
+			ReturnURL: "https://juliiafitness.ru/",
 		},
 	}
 
