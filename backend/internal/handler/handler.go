@@ -343,11 +343,15 @@ func WebhookY(Webook m.YookassaWebhook) error {
 		PurchasePaid.SubStart = time.Now()
 		PurchasePaid.SubEnd = PurchasePaid.SubStart.Add(720 * time.Hour)
 
-		rows, _ := d.DB.Query(`
+		rows, err := d.DB.Query(`
 				SELECT product_id, product_name, product_price 
 				FROM purchase_item
 				WHERE purchase_request_id=$1
 			`, PurchasePaid.ID)
+
+		if err != nil {
+			return fmt.Errorf("err query purchase_item: %w", err)
+		}
 
 		defer rows.Close()
 
@@ -369,6 +373,12 @@ func WebhookY(Webook m.YookassaWebhook) error {
 				`, PurchasePaid.UserID, PurchasePaid.Email, PurchasePaid.PaymentID, PurchasePaid.SubStart, PurchasePaid.SubEnd, ItemPaid.ProductName, ItemPaid.ProductPrice, ItemPaid.ProductID)
 			if err != nil {
 				return fmt.Errorf("err insert successful_purchases: %w", err)
+			}
+			_, err = d.DB.Exec(`
+				DELETE FROM basket
+				WHERE user_id=$1 AND product_id=$2`, PurchasePaid.UserID, ItemPaid.ProductID)
+			if err != nil {
+				return fmt.Errorf("Error delete basket from %v user:%w", PurchasePaid.UserID, err)
 			}
 		}
 		return nil
