@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkjuliaazhivaeva=self.webpackChunkjuliaazhivaeva||[]).push([[33],{33:(a,n,e)=>{e.r(n),e.d(n,{default:()=>t});const s={};var c=e(216),i=e(579);function t(){const a=(0,c.Zp)();return(0,i.jsxs)(i.Fragment,{children:[(0,i.jsx)("div",{className:s.container,children:"Coming soon"}),(0,i.jsx)("button",{onClick:()=>a("/"),children:" back "})]})}}}]);
+//# sourceMappingURL=33.7aa6b4d7.chunk.js.map

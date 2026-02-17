@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+
+Disallow: /login
+Disallow: /register
+Disallow: /recover
+Disallow: /RecoverForm
+Disallow: /profile
+Disallow: /cart
+Disallow: /calc
